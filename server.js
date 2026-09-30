@@ -1,76 +1,147 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const compression = require('compression');
+const moment = require('moment');
 const Database = require('better-sqlite3');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const applySchema = require('./lib/schema');
+const { createSessionStore } = require('./lib/session-store');
+const { REPO_ROOT } = require('./lib/paths');
 
-const db = new Database(path.join(__dirname, 'db', 'gitgram.db'));
+const app = express();
+// Port 0 is a valid request for an ephemeral port, so an explicit empty check
+// is needed rather than a falsy one.
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+// A secret that changes between boots silently invalidates every session, so
+// production requires an explicit one rather than falling back to a random value.
+function resolveSessionSecret() {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  if (IS_PRODUCTION) {
+    console.error('SESSION_SECRET must be set when NODE_ENV=production.');
+    process.exit(1);
+  }
+  console.warn('SESSION_SECRET is not set; using a random secret. Sessions will not survive a restart.');
+  return crypto.randomBytes(32).toString('hex');
+}
+
+const dbPath = process.env.GITGRAM_DB_PATH
+  ? path.resolve(process.env.GITGRAM_DB_PATH)
+  : path.join(__dirname, 'db', 'gitgram.db');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+fs.mkdirSync(REPO_ROOT, { recursive: true });
+
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+applySchema(db);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    bio TEXT DEFAULT '',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE TABLE IF NOT EXISTS repositories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    full_name TEXT UNIQUE NOT NULL,
-    description TEXT DEFAULT '',
-    owner_id INTEGER NOT NULL,
-    private INTEGER DEFAULT 0,
-    default_branch TEXT DEFAULT 'main',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
-  );
-`);
+const sessionStore = createSessionStore(db, { ttlMs: SESSION_MAX_AGE_MS });
+
+app.disable('x-powered-by');
+if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
 
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: IS_PRODUCTION ? '1d' : 0 }));
 
-app.use(session({
-  secret: 'gitgram-secret-' + Date.now(),
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
-}));
+app.use(
+  session({
+    name: 'gitgram.sid',
+    secret: resolveSessionSecret(),
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: SESSION_MAX_AGE_MS,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: IS_PRODUCTION,
+    },
+  })
+);
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use((req, res, next) => {
-  res.locals.currentUser = req.session.userId ? db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId) : null;
-  res.locals.moment = require('moment');
-  res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + PORT;
+  res.locals.currentUser = req.session.userId
+    ? db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId)
+    : null;
+  res.locals.moment = moment;
+  res.locals.publicUrl = (process.env.PUBLIC_URL || `http://localhost:${boundPort}`).replace(
+    /\/$/,
+    ''
+  );
   next();
 });
 
-const authRoutes = require('./routes/auth')(db);
-const gitRoutes = require('./routes/git')(db);
-const repoRoutes = require('./routes/repos')(db);
-const apiRoutes = require('./routes/api')(db);
-
-app.use('/', authRoutes);
-app.use('/', gitRoutes);
-app.use('/', repoRoutes);
-app.use('/api', apiRoutes);
-
 app.get('/', (req, res) => {
-  const repos = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.private = 0 ORDER BY r.updated_at DESC LIMIT 20`).all();
+  const repos = db
+    .prepare(
+      `SELECT r.*, u.username as owner_name FROM repositories r
+       JOIN users u ON r.owner_id = u.id
+       WHERE r.private = 0 ORDER BY r.updated_at DESC LIMIT 20`
+    )
+    .all();
   res.render('index', { title: 'GITGRAM - Your Own Git Platform', repos });
 });
 
-app.listen(PORT, () => {
-  console.log('🚀 GITGRAM running on http://localhost:' + PORT);
+app.use('/', require('./routes/auth')(db));
+app.use('/', require('./routes/git')(db));
+app.use('/', require('./routes/repos')(db));
+app.use('/api', require('./routes/api')(db));
+
+app.use((req, res) => {
+  res.status(404).render('404', { title: 'Not Found - GITGRAM' });
 });
+
+// Without this, an unexpected throw renders Express's default handler, which
+// returns a full stack trace to the browser.
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return res.destroy();
+  res.status(500).render('error', {
+    title: 'Error - GITGRAM',
+    detail: IS_PRODUCTION ? null : err && err.stack,
+  });
+});
+
+// Resolved after listen so that an ephemeral port (PORT=0) is reflected in the
+// clone URLs shown in the UI.
+let boundPort = PORT;
+
+const server = app.listen(PORT);
+
+server.on('listening', () => {
+  boundPort = server.address().port;
+  console.log(`GITGRAM running on http://localhost:${boundPort}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Set PORT to a free port.`);
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
+});
+
+function shutdown(signal) {
+  console.log(`Received ${signal}, shutting down.`);
+  server.close(() => {
+    sessionStore.stopPruning();
+    db.close();
+    process.exit(0);
+  });
+}
+
+['SIGINT', 'SIGTERM'].forEach((signal) => process.on(signal, () => shutdown(signal)));
+
+module.exports = { app, server, db };

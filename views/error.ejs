@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+<div class="container">
+  <div class="empty-repo" style="margin-top:60px;">
+    <div style="font-size:3rem;margin-bottom:12px;">⚠️</div>
+    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:12px;">Something went wrong</h1>
+    <p style="color:var(--text-secondary);margin-bottom:24px;">
+      An unexpected error occurred while handling your request. The details have been logged.
+    </p>
+    <% if (typeof detail !== 'undefined' && detail) { %>
+      <pre style="text-align:left;overflow-x:auto;background:var(--bg-tertiary);padding:16px;border-radius:var(--radius);font-size:0.75rem;color:var(--text-secondary);"><%= detail %></pre>
+    <% } %>
+    <a href="/" class="btn btn-primary" style="margin-top:16px;">Back to home</a>
+  </div>
+</div>
+<%- include('partials/footer') %>
