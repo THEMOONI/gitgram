@@ -12,7 +12,9 @@ const { createSessionStore } = require('./lib/session-store');
 const { REPO_ROOT } = require('./lib/paths');
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+// Port 0 is a valid request for an ephemeral port, so an explicit empty check
+// is needed rather than a falsy one.
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -28,11 +30,13 @@ function resolveSessionSecret() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-const dbDirectory = path.join(__dirname, 'db');
-fs.mkdirSync(dbDirectory, { recursive: true });
+const dbPath = process.env.GITGRAM_DB_PATH
+  ? path.resolve(process.env.GITGRAM_DB_PATH)
+  : path.join(__dirname, 'db', 'gitgram.db');
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 fs.mkdirSync(REPO_ROOT, { recursive: true });
 
-const db = new Database(path.join(dbDirectory, 'gitgram.db'));
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 applySchema(db);
@@ -71,7 +75,10 @@ app.use((req, res, next) => {
     ? db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId)
     : null;
   res.locals.moment = moment;
-  res.locals.publicUrl = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+  res.locals.publicUrl = (process.env.PUBLIC_URL || `http://localhost:${boundPort}`).replace(
+    /\/$/,
+    ''
+  );
   next();
 });
 
@@ -106,8 +113,24 @@ app.use((err, req, res, next) => {
   });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`GITGRAM running on http://localhost:${PORT}`);
+// Resolved after listen so that an ephemeral port (PORT=0) is reflected in the
+// clone URLs shown in the UI.
+let boundPort = PORT;
+
+const server = app.listen(PORT);
+
+server.on('listening', () => {
+  boundPort = server.address().port;
+  console.log(`GITGRAM running on http://localhost:${boundPort}`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Set PORT to a free port.`);
+  } else {
+    console.error(err);
+  }
+  process.exit(1);
 });
 
 function shutdown(signal) {
