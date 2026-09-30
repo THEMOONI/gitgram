@@ -1,0 +1,13 @@
+node_modules/
+
+# SQLite database and its write-ahead log sidecars
+db/*.db
+db/*.db-shm
+db/*.db-wal
+
+# Bare git repositories created by users at runtime
+data/
+
+.env
+*.log
+.DS_Store
