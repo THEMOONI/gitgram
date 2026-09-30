@@ -1,10 +1,15 @@
 {
   "name": "gitgram",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A self-hosted Git platform with a web UI and Git-over-HTTP support",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20.6.0"
   },
   "repository": {
     "type": "git",

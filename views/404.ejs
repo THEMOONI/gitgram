@@ -1,0 +1,12 @@
+<%- include('partials/header') %>
+<div class="container">
+  <div class="empty-repo" style="margin-top:60px;">
+    <div style="font-size:3rem;margin-bottom:12px;">🧭</div>
+    <h1 style="font-size:1.6rem;font-weight:800;margin-bottom:12px;"><%= typeof heading !== 'undefined' ? heading : 'Page not found' %></h1>
+    <p style="color:var(--text-secondary);margin-bottom:24px;">
+      <%= typeof message !== 'undefined' ? message : "We couldn't find what you were looking for. It may have been moved, deleted, or never existed." %>
+    </p>
+    <a href="/" class="btn btn-primary">Back to home</a>
+  </div>
+</div>
+<%- include('partials/footer') %>
