@@ -35,6 +35,10 @@ That runs `node --test`.
 | `GITGRAM_DB` | No | SQLite database path. Defaults to `db/gitgram.db`. |
 | `GITGRAM_DATA` | No | Directory for bare repositories. Defaults to `data/`. |
 
+## Security
+
+Report vulnerabilities privately. The contact address and disclosure timings are in [SECURITY.md](SECURITY.md). The owner still has to fill in the placeholder address.
+
 ## License
 
-GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE).
+GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE). Production dependency licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Regenerate that file with `npm run licenses`.

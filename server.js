@@ -100,7 +100,7 @@ function createApp(options = {}) {
     next();
   });
 
-  app.use('/', require('./routes/auth')(db));
+  app.use('/', require('./routes/auth')(db, { loginRateLimit: options.loginRateLimit }));
   app.use('/', require('./routes/git')(db, { dataDir }));
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));
