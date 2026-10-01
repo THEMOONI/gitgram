@@ -251,7 +251,7 @@ test('market buy books a protective stop, fee, and a balanced ledger', async () 
       portfolioId: id,
       actor: ctx.actor,
       feed: ctx.feed,
-      order: { clientOrderId: 'buy-btc-1', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 8 },
+      order: { clientOrderId: 'buy-btc-1', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 8, limitPrice: '', stopPrice: '' },
     });
     assert.equal(placed.order.status, 'filled');
     const orders = engine.listOrders(ctx.db, id);
