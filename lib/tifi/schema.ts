@@ -54,6 +54,7 @@ function ensureTifiSchema(db: any): void {
       day_start_equity_micro INTEGER,
       last_trade_at TEXT,
       rules_text TEXT NOT NULL DEFAULT '',
+      venue TEXT NOT NULL DEFAULT 'world',
       created_at TEXT NOT NULL
     ) STRICT;
 
@@ -98,7 +99,38 @@ function ensureTifiSchema(db: any): void {
       failed_at TEXT NOT NULL
     ) STRICT;
 
+    CREATE TABLE IF NOT EXISTS tifi_world_fills (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      tiger_id INTEGER NOT NULL,
+      market_id TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      side TEXT NOT NULL CHECK (side IN ('buy', 'sell', 'settle')),
+      shares_micro INTEGER NOT NULL,
+      price_micro INTEGER NOT NULL,
+      fee_micro INTEGER NOT NULL,
+      cash_delta_micro INTEGER NOT NULL,
+      ts TEXT NOT NULL,
+      audit_hash TEXT NOT NULL
+    ) STRICT;
+
+    CREATE TABLE IF NOT EXISTS tifi_world_positions (
+      tiger_id INTEGER NOT NULL,
+      market_id TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      shares_micro INTEGER NOT NULL,
+      cost_micro INTEGER NOT NULL,
+      last_mid_micro INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL CHECK (status IN ('open', 'settled')),
+      payout_micro INTEGER NOT NULL DEFAULT 0,
+      settled_at TEXT,
+      title TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (tiger_id, market_id, outcome)
+    ) STRICT;
+
     CREATE INDEX IF NOT EXISTS idx_tifi_tigers_user ON tifi_tigers(user_id);
+    CREATE INDEX IF NOT EXISTS idx_tifi_world_fills_tiger ON tifi_world_fills(tiger_id, id);
+    CREATE INDEX IF NOT EXISTS idx_tifi_world_positions_tiger ON tifi_world_positions(tiger_id, status);
     CREATE INDEX IF NOT EXISTS idx_tifi_decisions_user ON tifi_decisions(user_id, id);
     CREATE INDEX IF NOT EXISTS idx_tifi_transfers_user ON tifi_transfers(user_id, id);
 
@@ -122,7 +154,21 @@ function ensureTifiSchema(db: any): void {
     BEGIN
       SELECT RAISE(ABORT, 'tifi decisions are append-only');
     END;
+    CREATE TRIGGER IF NOT EXISTS tifi_world_fills_no_update
+    BEFORE UPDATE ON tifi_world_fills
+    BEGIN
+      SELECT RAISE(ABORT, 'tifi world fills are append-only');
+    END;
+    CREATE TRIGGER IF NOT EXISTS tifi_world_fills_no_delete
+    BEFORE DELETE ON tifi_world_fills
+    BEGIN
+      SELECT RAISE(ABORT, 'tifi world fills are append-only');
+    END;
   `);
+  const columns = db.prepare('PRAGMA table_info(tifi_tigers)').all();
+  if (!columns.some((column: any) => column.name === 'venue')) {
+    db.exec(`ALTER TABLE tifi_tigers ADD COLUMN venue TEXT NOT NULL DEFAULT 'world'`);
+  }
 }
 
 module.exports = { ensureTifiSchema };

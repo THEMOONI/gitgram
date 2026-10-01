@@ -36,7 +36,7 @@
     </div>
     <div class="rk"><b>#<%= tiger.rank %></b><small><%= tiger.gap %></small></div>
   </div>
-  <div class="strat"><span class="k">Strategi</span><b><%= tiger.strategyLabel %></b><span>·</span><% if (tiger.coin) { %><span class="tifi-chip"><%= tiger.coin %></span><% } %><span>perp (sim)</span></div>
+    <div class="strat"><span class="k">Strategi</span><b><%= tiger.strategyLabel %></b><span>·</span><% if (tiger.coin) { %><span class="tifi-chip"><%= tiger.coin %></span><% } %><span><%= tiger.venue === 'world' ? 'World (papper)' : 'perp (sim)' %></span></div>
   <div>
     <div class="bal"><span class="big"><%= tiger.equity %></span><span class="cur">DEMO</span></div>
     <div class="bal" style="margin-top:4px"><span class="ch <%= tiger.pnlUp ? 'tifi-up' : (tiger.pnlDown ? 'tifi-down' : 'tifi-flat') %>"><%= tiger.pnlUp ? '▲' : (tiger.pnlDown ? '▼' : '') %> <%= tiger.pnl %> (<%= tiger.percentLabel %>)</span><span class="tifi-sim">sim · saldo</span></div>
@@ -130,6 +130,54 @@
   </section>
 </aside>
 </div>
+<section class="panel world" aria-labelledby="world-h">
+  <div class="ph">
+    <h2 class="tifi-card__title" id="world-h" style="margin:0"><%= board.world.title %></h2>
+    <small><% if (board.world.simulated) { %><strong class="sim-flag">simulerat</strong> <% } %><%= board.world.sourceLabel %> · <%= board.world.fresh %></small>
+  </div>
+  <p class="fn">DEMO · PAPER TRADING · inte finansiell rådgivning. Visas bara för den inloggade ägaren. Ingen export, ingen delning och ingen offentlig visning. <%= board.world.assumptions %></p>
+  <% if (board.world.note) { %><p class="fn"><%= board.world.note %></p><% } %>
+  <% if (!board.world.markets.length) { %>
+  <p class="fn">Inga aktiva marknader just nu.</p>
+  <% } %>
+  <% board.world.markets.forEach(function (market) { %>
+  <div class="wm">
+    <div class="r"><b><%= market.seriesTicker || market.title %></b><span><% if (market.simulated) { %><strong class="sim-flag">simulerat</strong> <% } %><span class="tifi-mono"><%= market.countdown %></span></span></div>
+    <div class="outs">
+      <% market.outcomes.forEach(function (outcome) { %>
+      <span><b><%= outcome.label %></b> köp <%= outcome.ask %> · sälj <%= outcome.bid %> · mid <%= outcome.mid %></span>
+      <% }) %>
+    </div>
+  </div>
+  <% }) %>
+  <% board.world.tigers.forEach(function (tiger) { %>
+  <div class="wt">
+    <div class="r"><b><%= tiger.name %></b><span><%= tiger.venueLabel %></span></div>
+    <% if (!tiger.open.length) { %><p class="fn">Ingen öppen World-position.</p><% } %>
+    <% tiger.open.forEach(function (pos) { %>
+    <p class="fn"><%= pos.outcome %> · <%= pos.shares %> andelar · värde <%= pos.value %> DEMO<% if (pos.title) { %> · <%= pos.title %><% } %></p>
+    <% }) %>
+    <% tiger.settled.forEach(function (pos) { %>
+    <p class="fn">Avgjord <%= pos.outcome %> · utfall <%= pos.payout %> DEMO · <%= pos.won ? 'vinst' : 'förlust' %><% if (pos.title) { %> · <%= pos.title %><% } %></p>
+    <% }) %>
+    <form method="post" action="/tifi/tigers/<%= tiger.id %>/venue">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="tifi-field">
+        <label class="tifi-label" for="venue-<%= tiger.id %>">Marknad för <%= tiger.name %></label>
+        <select class="tifi-input" id="venue-<%= tiger.id %>" name="venue">
+          <option value="world"<%= tiger.venue === 'world' ? ' selected' : '' %>>World-marknader (papper)</option>
+          <option value="paper"<%= tiger.venue === 'paper' ? ' selected' : '' %>>Befintlig pappersmarknad</option>
+        </select>
+      </div>
+      <div class="tifi-field">
+        <label class="tifi-label" for="venue-pw-<%= tiger.id %>">Ägarlösenord</label>
+        <input class="tifi-input" id="venue-pw-<%= tiger.id %>" type="password" name="owner_password" autocomplete="current-password" required>
+      </div>
+      <button class="tifi-btn tifi-btn--secondary" type="submit">Spara val</button>
+    </form>
+  </div>
+  <% }) %>
+</section>
 <section class="panel owner" aria-labelledby="own-h">
   <div class="ph"><h2 class="tifi-card__title" id="own-h" style="margin:0">Ägaråtgärder</h2><small>kräver ägarlösenord för flytt och återupptagning</small></div>
   <form method="post" action="/tifi/treasury/move">

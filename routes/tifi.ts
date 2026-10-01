@@ -11,11 +11,15 @@ const { TifiError } = require('../lib/tifi/errors.ts') as {
 const { assertOwnerPassword } = require('../lib/tifi/auth.ts') as {
   assertOwnerPassword: (db: any, userId: number, password: string, clock?: () => Date) => void;
 };
-const { loadBoard } = require('../lib/tifi/board.ts') as { loadBoard: (db: any, userId: number) => any };
+const { loadBoard, worldPanel } = require('../lib/tifi/board.ts') as {
+  loadBoard: (db: any, userId: number) => any;
+  worldPanel: (db: any, userId: number, snapshot: any, now: Date, env?: any) => any;
+};
 const { subscribe } = require('../lib/tifi/events.ts') as { subscribe: (fn: (event: any) => void) => () => void };
-const { moveCash, listTigers } = require('../lib/tifi/treasury.ts') as {
+const { moveCash, listTigers, setTigerVenue } = require('../lib/tifi/treasury.ts') as {
   moveCash: (db: any, args: any) => void;
   listTigers: (db: any, userId: number) => any[];
+  setTigerVenue: (db: any, userId: number, tigerId: number, venue: string) => void;
 };
 const { setRunning, stepUser, startScheduler } = require('../lib/tifi/runner.ts') as {
   setRunning: (db: any, userId: number, running: boolean, clock?: () => Date) => any;
@@ -29,6 +33,12 @@ const { parseTigerSentence } = require('../lib/tifi/parser.ts') as { parseTigerS
 const setup = require('../lib/tifi/setup.ts') as any;
 const { runTigerBacktest } = require('../lib/tifi/backtest.ts') as { runTigerBacktest: (db: any, row: any, opts: any) => Promise<any> };
 const engine = require('../lib/paper/engine');
+const { createWorldFeed } = require('../lib/tifi/world-feed.ts') as {
+  createWorldFeed: (env?: any, opts?: any) => any;
+};
+const { markOpenToFeed } = require('../lib/tifi/world-venue.ts') as {
+  markOpenToFeed: (db: any, userId: number, markets: any[]) => void;
+};
 
 function envelope(body: any): any {
   return {
@@ -49,7 +59,8 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
   if (options.autoRun) startScheduler(db, { feed, clock, tickMs: options.tickMs || 5000 });
 
   function requireUser(req: any, res: any, next: any) {
-    res.set('Cache-Control', 'no-store');
+    res.set('Cache-Control', 'private, no-store');
+    res.set('X-Robots-Tag', 'noindex, nofollow');
     res.locals.navTifi = true;
     if (!req.session.userId) return res.redirect('/login');
     const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId);
@@ -82,10 +93,31 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     });
   }
 
-  router.get('/tifi/api/state', requireUser, (req: any, res: any) => {
+  async function boardFor(userId: number): Promise<any> {
+    const now = clock();
+    let snapshot: any = {
+      markets: [],
+      source: 'simulated',
+      live: false,
+      fetchedAt: now.toISOString(),
+      note: null,
+    };
+    try {
+      const feed = createWorldFeed(process.env, { fetchImpl: globalThis.fetch, now: clock });
+      snapshot = await feed.listActive();
+      markOpenToFeed(db, userId, snapshot.markets || []);
+    } catch {
+      snapshot.note = 'Flödet kunde inte läsas. Visar det simulerade flödet.';
+    }
+    const board = loadBoard(db, userId);
+    board.world = worldPanel(db, userId, snapshot, now, process.env);
+    return board;
+  }
+
+  router.get('/tifi/api/state', requireUser, async (req: any, res: any) => {
     const row = setup.setupRow(db, req.tifiUser.id);
     if (!row || !row.finished_at) return res.status(409).json(envelope({ error: 'setup', message: 'Installningen är inte klar.' }));
-    res.json(envelope({ board: loadBoard(db, req.tifiUser.id) }));
+    res.json(envelope({ board: await boardFor(req.tifiUser.id) }));
   });
 
   router.get('/tifi/events', requireUser, (req: any, res: any) => {
@@ -193,12 +225,12 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     res.redirect('/tifi');
   });
 
-  router.get('/tifi', requireUser, (req: any, res: any) => {
+  router.get('/tifi', requireUser, async (req: any, res: any) => {
     const row = setup.setupRow(db, req.tifiUser.id);
     if (!row || !row.finished_at) return res.redirect('/tifi/setup');
     const note = flash(req);
     page(res, 'tifi/dashboard', {
-      board: loadBoard(db, req.tifiUser.id),
+      board: await boardFor(req.tifiUser.id),
       formError: note && note.error,
       formOk: note && note.ok,
       username: req.tifiUser.username,
@@ -243,6 +275,20 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
       return req.session.save(() => res.redirect('/tifi/tigers'));
     } catch (err) {
       return fail(req, res, err, next, '/tifi/tigers');
+    }
+  });
+
+  router.post('/tifi/tigers/:id/venue', requireUser, (req: any, res: any, next: any) => {
+    try {
+      assertOwnerPassword(db, req.tifiUser.id, String(req.body.owner_password || ''), clock);
+      const tiger = ownedTiger(req);
+      const venue = String(req.body.venue || '');
+      setTigerVenue(db, req.tifiUser.id, tiger.id, venue);
+      const label = venue === 'paper' ? 'pappersmarknaden' : 'World-marknader (papper)';
+      req.session.tifiFlash = { ok: tiger.name + ' handlar nu på ' + label + '. Inga riktiga pengar.' };
+      return req.session.save(() => res.redirect('/tifi'));
+    } catch (err) {
+      return fail(req, res, err, next, '/tifi');
     }
   });
 

@@ -12,8 +12,10 @@ Fas 1 är en papperssimulator ovanpå Gitgrams demoplånbok och pappersmotor.
 - En tavla med status, procent, beslut och en intern topplista som bara visar procent.
 - En kassa på 1000 DEMO som delas lika mellan de tre tigrarna. Ledig kassa kan flyttas tillbaka.
 - Bara lekpengar och den befintliga prisadaptern (påhittad serie om ingen marknadsdatanyckel är satt).
+- World-marknader på papper: simulerat flöde som standard, eller en lokal läsare på loopback som bara lämnar offentlig kedjedata (Solana-programkonton och Chainlink). Serierna är 15 minuter för BTC, ETH och SOL. Ingen PayBox-klient och ingen direkt hämtning från World.
+- Tavlan visar marknaderna bara för den inloggade ägaren. Ingen export, delning eller offentlig visning.
 
-Det finns inget live-läge, ingen börsklient, ingen orderläggning mot en börs och ingen hantering av börsnycklar.
+Det finns inget live-läge, ingen börsklient, ingen orderläggning mot en börs och ingen hantering av börsnycklar. Riktiga pengar mot World eller PayBox är inte tillåtna. Juridisk granskning har sagt nej, och det anropet är låst.
 
 ## Fas 2, riktiga pengar på OKX (byggs inte)
 
@@ -30,4 +32,4 @@ Om det senare godkänns, och bara då, är de manuella stegen:
 5. Minskad positionsstorlek de första timmarna.
 6. En dokumenterad nedstängning som slutar skicka nya order och stänger öppna positioner (flatten).
 
-I fas 1 vägrar koden att starta ett live-läge. Anropet kastar ett fel som säger att fas 2 kräver godkännande och juridisk granskning.
+I fas 1 vägrar koden att starta ett live-läge. Anropet kastar ett fel som säger att fas 2 kräver godkännande och juridisk granskning. Riktiga pengar mot World eller PayBox vägras alltid: juridisk granskning har sagt nej.

@@ -213,8 +213,8 @@ function createTiger(db: any, userId: number, config: any, slot: number | null, 
       user_id, slot, name, tagline, strategy, params_json, symbols_json, status, pause_reason,
       portfolio_id, max_leverage, max_stop_pct, daily_loss_pct, max_trades_per_day, cooldown_sec,
       max_position_pct, fee_budget_pct, portrait_variant, allocated_minor, day_utc,
-      day_start_equity_micro, last_trade_at, rules_text, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, NULL, ?, ?)
+      day_start_equity_micro, last_trade_at, rules_text, venue, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, NULL, ?, ?, ?)
   `).run(
     userId,
     slot,
@@ -233,9 +233,18 @@ function createTiger(db: any, userId: number, config: any, slot: number | null, 
     config.feeBudgetPct,
     config.portraitVariant || slot || 1,
     config.rulesText || '',
+    config.venue === 'paper' ? 'paper' : 'world',
     ts,
   );
   return Number(info.lastInsertRowid);
+}
+
+function setTigerVenue(db: any, userId: number, tigerId: number, venue: string): void {
+  if (venue !== 'paper' && venue !== 'world') {
+    throw new TifiError('VENUE', 'Välj pappersmarknad eller World-marknader (papper).');
+  }
+  const info = db.prepare('UPDATE tifi_tigers SET venue = ? WHERE id = ? AND user_id = ?').run(venue, tigerId, userId);
+  if (!info.changes) throw new TifiError('NOT_FOUND', 'Tigern finns inte.', 404);
 }
 
 function listTigers(db: any, userId: number): any[] {
@@ -286,6 +295,7 @@ module.exports = {
   freeMinor,
   moveCash,
   createTiger,
+  setTigerVenue,
   listTigers,
   splitEqual,
   allocateToSlots,

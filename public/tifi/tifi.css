@@ -104,6 +104,14 @@ body:has(.tifi) .main-content { padding: 0; width: 100%; }
 .tifi .alloc .nm i { width: 9px; height: 9px; border-radius: 3px; background: var(--acc); }
 .tifi .alloc .num { font-family: var(--tifi-font-mono); text-align: right; white-space: nowrap; }
 .tifi .pool .fn { font-size: 11.5px; color: var(--tifi-text-3); margin-top: 10px; border-top: 1px solid var(--tifi-line); padding-top: 8px; }
+.tifi .sim-flag { display: inline-block; margin-right: 6px; padding: 1px 7px; border: 1px solid var(--tifi-line-2); border-radius: 999px; font-family: var(--tifi-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: lowercase; color: var(--tifi-text-1); background: var(--tifi-bg-2); }
+.tifi .world { margin-top: 14px; }
+.tifi .world .fn { font-size: 12px; color: var(--tifi-text-3); margin: 0 0 10px; }
+.tifi .world .wm, .tifi .world .wt { background: var(--tifi-bg-2); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 10px 12px; margin-bottom: 8px; }
+.tifi .world .r { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.tifi .world .outs { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; font-family: var(--tifi-font-mono); font-size: 12px; }
+.tifi .world form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.tifi .world form .tifi-field { margin: 0; min-width: 180px; flex: 1; }
 
 .tifi .wrap { padding: 40px 24px 48px; display: flex; justify-content: center; background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,122,26,.10), transparent 70%); }
 .tifi .setup { width: 100%; max-width: 960px; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius-xl); padding: 32px 34px 26px; box-shadow: var(--tifi-shadow-card); }

@@ -1,6 +1,11 @@
 const engine = require('../paper/engine');
 const { createSyntheticFeed } = require('../paper/feeds') as { createSyntheticFeed: (opts?: any) => any };
 const { decideTiger } = require('./decide.ts') as { decideTiger: (db: any, tiger: any, args: any) => Promise<any> };
+const { decideWorldTiger } = require('./world-decide.ts') as { decideWorldTiger: (db: any, tiger: any, args: any) => Promise<any> };
+const { createWorldFeed, tigerUnderlying } = require('./world-feed.ts') as {
+  createWorldFeed: (env?: any, opts?: any) => any;
+  tigerUnderlying: (tiger: any) => string;
+};
 const { listTigers } = require('./treasury.ts') as { listTigers: (db: any, userId: number) => any[] };
 const { createDecisionModel } = require('./model.ts') as { createDecisionModel: (env: any, deps?: any) => any };
 const { createVenue } = require('./venue.ts') as { createVenue: (mode: string | undefined, deps: any) => any };
@@ -51,9 +56,12 @@ async function stepUser(db: any, userId: number, opts: any = {}): Promise<any> {
   const tigers = listTigers(db, userId);
   if (!tigers.length) return { skipped: true, reason: 'no-tigers', cursor: runner.cursor_index };
   const symbols = new Set<string>();
+  let anyWorld = false;
   for (const tiger of tigers) {
+    if ((tiger.venue || 'world') !== 'paper') anyWorld = true;
     for (const symbol of JSON.parse(tiger.symbols_json)) symbols.add(symbol);
   }
+  if (anyWorld) symbols.add('BTC');
   const feed = opts.feed || createSyntheticFeed({ seed: 20261001 });
   const raw: Record<string, any[]> = {};
   let times: string[] = [];
@@ -90,6 +98,11 @@ async function stepUser(db: any, userId: number, opts: any = {}): Promise<any> {
   }
   const model = opts.model || createDecisionModel(opts.env || process.env, { fetchImpl: opts.fetchImpl });
   const venue = createVenue(opts.mode || 'paper', { placeOrder: opts.placeOrder || engine.placeOrder });
+  const worldEnv = opts.env || process.env;
+  const worldFeed = anyWorld
+    ? (opts.worldFeed || createWorldFeed(worldEnv, { fetchImpl: opts.fetchImpl, now: opts.clock || (() => new Date()) }))
+    : null;
+  const nowIso = iso(opts.clock);
   const decisions = [];
   for (const tiger of tigers) {
     const fresh = db.prepare('SELECT * FROM tifi_tigers WHERE id = ?').get(tiger.id);
@@ -102,15 +115,24 @@ async function stepUser(db: any, userId: number, opts: any = {}): Promise<any> {
     });
     const symbol = JSON.parse(fresh.symbols_json)[0];
     const quoteBar = barsNow[symbol] || Object.values(barsNow)[0];
-    const outcome = await decideTiger(db, fresh, {
-      series: numeric,
-      barTs,
-      model,
-      place: venue.place,
-      quote: quoteBar
-        ? { priceMicro: quoteBar.closeMicro, ts: barTs, source: feed.id || 'synthetic' }
-        : null,
-    });
+    const onWorld = (fresh.venue || 'world') !== 'paper' && worldFeed;
+    const outcome = onWorld
+      ? await decideWorldTiger(db, fresh, {
+        bars: numeric[tigerUnderlying(fresh)] || numeric.BTC || [],
+        nowIso,
+        model,
+        feed: worldFeed,
+        env: worldEnv,
+      })
+      : await decideTiger(db, fresh, {
+        series: numeric,
+        barTs,
+        model,
+        place: venue.place,
+        quote: quoteBar
+          ? { priceMicro: quoteBar.closeMicro, ts: barTs, source: feed.id || 'synthetic' }
+          : null,
+      });
     decisions.push({ tigerId: fresh.id, verdict: outcome.guard.verdict, symbol: outcome.proposal.symbol });
   }
   db.prepare('UPDATE tifi_runner SET cursor_index = ?, updated_at = ? WHERE user_id = ?').run(next, iso(opts.clock), userId);

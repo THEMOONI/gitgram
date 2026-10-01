@@ -18,6 +18,12 @@ const { ensureRunner } = require('./runner.ts') as { ensureRunner: (db: any, use
 const { portraitThumb } = require('./portraits.ts') as {
   portraitThumb: (slot: number, ready?: boolean) => string;
 };
+const { worldAdjustment, listPositions, worldAssumptions, positionValue } = require('./world-venue.ts') as {
+  worldAdjustment: (db: any, tigerId: number) => { cashDelta: bigint; openMark: bigint };
+  listPositions: (db: any, tigerId: number) => { open: any[]; settled: any[] };
+  worldAssumptions: (env?: any) => { feeNote: string };
+  positionValue: (shares: bigint, mid: bigint) => bigint;
+};
 
 const MICRO_PER_MINOR = 10000n;
 const ACCENT = ['#FF7A1A', '#FFB547', '#EDE6DA'];
@@ -132,8 +138,10 @@ function primaryAction(bars: any[]): string {
 
 function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
   const state = engine.readState(db, row.portfolio_id);
-  const equity = state ? asMicro(state.equityMicro) : 0n;
-  const cash = state ? asMicro(state.cashMicro) : 0n;
+  const adjust = worldAdjustment(db, row.id);
+  const equity = (state ? asMicro(state.equityMicro) : 0n) + adjust.cashDelta + adjust.openMark;
+  let cash = (state ? asMicro(state.cashMicro) : 0n) + adjust.cashDelta;
+  if (cash < 0n) cash = 0n;
   const pct = percentFrom(equity, row.allocated_minor);
   const pnl = equity - BigInt(row.allocated_minor) * MICRO_PER_MINOR;
   const positions = state ? state.positions : [];
@@ -189,6 +197,8 @@ function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
     tagline: row.tagline,
     personality: /^den /.test(String(row.tagline || '')),
     strategy: row.strategy,
+    venue: row.venue === 'paper' ? 'paper' : 'world',
+    venueLabel: row.venue === 'paper' ? 'Pappersmarknad' : 'World-marknader',
     strategyLabel: row.strategy === 'breakout' ? 'Utbrott' : row.strategy === 'trend' ? 'Trend' : 'Momentum',
     coin: pos ? pos.symbol : (symbols[0] || ''),
     accent: 'var(--tifi-t' + slot + ')',
@@ -255,11 +265,93 @@ function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
   };
 }
 
+function tigerBookEquity(db: any, row: any): bigint {
+  const state = engine.readState(db, row.portfolio_id);
+  const adjust = worldAdjustment(db, row.id);
+  return (state ? asMicro(state.equityMicro) : 0n) + adjust.cashDelta + adjust.openMark;
+}
+
+function pricePct(value: number | null): string {
+  if (value == null || !Number.isFinite(Number(value))) return '\u2013';
+  return (Number(value) * 100).toFixed(1).replace('.', ',') + ' %';
+}
+
+function countdown(closesAt: string | null, now: Date): string {
+  if (!closesAt) return '\u2013';
+  const ms = Date.parse(closesAt) - now.getTime();
+  if (!Number.isFinite(ms)) return '\u2013';
+  if (ms <= 0) return 'stängd';
+  const total = Math.floor(ms / 1000);
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return minutes + ':' + String(seconds).padStart(2, '0');
+}
+
+function freshness(fetchedAt: string | null, now: Date): string {
+  const ms = fetchedAt ? now.getTime() - Date.parse(fetchedAt) : 0;
+  if (!Number.isFinite(ms) || ms < 5000) return 'just nu';
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return 'för ' + sec + ' s sedan';
+  return 'för ' + Math.floor(sec / 60) + ' min sedan';
+}
+
+function worldPanel(db: any, userId: number, snapshot: any, now: Date, env?: Record<string, string | undefined>): any {
+  const assumptions = worldAssumptions(env);
+  const markets = (snapshot && snapshot.markets) || [];
+  const live = !!(snapshot && snapshot.live && snapshot.source === 'world');
+  const markedSimulated = markets.length > 0 && markets.every((market: any) => String(market.source || '').toLowerCase() === 'simulated');
+  const simulated = !live || markedSimulated;
+  return {
+    title: 'World-marknader (papper, endast eget bruk, simulerat/kedjedata)',
+    privateUse: true,
+    exportable: false,
+    sourceLabel: simulated ? 'Simulerat flöde' : 'Kedjedata från lokal läsare · papper, endast eget bruk',
+    fresh: freshness(snapshot && snapshot.fetchedAt, now),
+    note: snapshot && snapshot.note,
+    simulated,
+    assumptions: assumptions.feeNote,
+    markets: markets.map((market: any) => ({
+      id: market.id,
+      title: market.title,
+      underlying: market.underlying,
+      seriesTicker: market.seriesTicker || '',
+      simulated: !live || String(market.source || snapshot.source || '').toLowerCase() === 'simulated',
+      countdown: countdown(market.closesAt, now),
+      outcomes: (market.outcomes || []).map((outcome: any) => ({
+        label: outcome.label,
+        bid: pricePct(outcome.bid),
+        ask: pricePct(outcome.ask),
+        mid: pricePct(outcome.mid),
+      })),
+    })),
+    tigers: listTigers(db, userId).map((tiger) => {
+      const book = listPositions(db, tiger.id);
+      return {
+        id: tiger.id,
+        name: tiger.name,
+        venue: tiger.venue === 'paper' ? 'paper' : 'world',
+        venueLabel: tiger.venue === 'paper' ? 'Pappersmarknad' : 'World-marknader',
+        open: book.open.map((row: any) => ({
+          outcome: row.outcome,
+          title: row.title,
+          shares: svMoney(asMicro(row.shares_micro), 2),
+          value: svMoney(positionValue(asMicro(row.shares_micro), asMicro(row.last_mid_micro)), 2),
+        })),
+        settled: book.settled.map((row: any) => ({
+          outcome: row.outcome,
+          title: row.title,
+          payout: svMoney(asMicro(row.payout_micro), 2),
+          won: asMicro(row.payout_micro) > 0n,
+        })),
+      };
+    }),
+  };
+}
+
 function loadBoard(db: any, userId: number): any {
   const tigers = listTigers(db, userId);
   const cards = tigers.map((row) => {
-    const state = engine.readState(db, row.portfolio_id);
-    const equity = state ? asMicro(state.equityMicro) : 0n;
+    const equity = tigerBookEquity(db, row);
     return { row, percent: percentFrom(equity, row.allocated_minor), equity };
   });
   const ranked = cards.slice().sort((a, b) => b.percent - a.percent || a.row.id - b.row.id);
@@ -289,8 +381,7 @@ function loadBoard(db: any, userId: number): any {
   let pool = 0n;
   for (const card of presented) {
     const row = tigers.find((tiger) => tiger.id === card.id);
-    const state = row ? engine.readState(db, row.portfolio_id) : null;
-    const equity = state ? asMicro(state.equityMicro) : 0n;
+    const equity = row ? tigerBookEquity(db, row) : 0n;
     pnl += equity - BigInt(row.allocated_minor) * MICRO_PER_MINOR;
     pool += equity;
     calls += card.calls;
@@ -303,13 +394,20 @@ function loadBoard(db: any, userId: number): any {
     WHERE t.user_id = ?
   `).get(userId);
   const costRow = db.prepare('SELECT COALESCE(SUM(model_cost_micro), 0) AS n FROM tifi_decisions WHERE user_id = ?').get(userId);
-  const fees = asMicro(feeRow ? feeRow.n : 0);
-  const model = asMicro(costRow ? costRow.n : 0);
-  const orderCount = db.prepare(`
-    SELECT COUNT(*) AS n FROM paper_fills f
-    JOIN tifi_tigers t ON t.portfolio_id = f.portfolio_id
+  const worldFeeRow = db.prepare(`
+    SELECT COALESCE(SUM(f.fee_micro), 0) AS n
+    FROM tifi_world_fills f
+    JOIN tifi_tigers t ON t.id = f.tiger_id
     WHERE t.user_id = ?
   `).get(userId);
+  const fees = asMicro(feeRow ? feeRow.n : 0) + asMicro(worldFeeRow ? worldFeeRow.n : 0);
+  const model = asMicro(costRow ? costRow.n : 0);
+  const orderCount = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM paper_fills f JOIN tifi_tigers t ON t.portfolio_id = f.portfolio_id WHERE t.user_id = ?)
+      + (SELECT COUNT(*) FROM tifi_world_fills f JOIN tifi_tigers t ON t.id = f.tiger_id WHERE t.user_id = ? AND f.side IN ('buy', 'sell'))
+      AS n
+  `).get(userId, userId);
   const now = new Date();
   const created = tigers[0] && tigers[0].created_at ? Date.parse(tigers[0].created_at) : now.getTime();
   const day = Math.max(1, Math.floor((now.getTime() - created) / 86400000) + 1);
@@ -348,8 +446,13 @@ function loadBoard(db: any, userId: number): any {
       const probs = JSON.parse(row.probabilities_json);
       const proposal = JSON.parse(row.proposal_json);
       const slot = row.tiger_slot || 1;
-      const action = proposal.action === 'buy' ? 'RID' : proposal.action === 'sell' ? 'STÄNG' : 'AVVAKTA';
-      const raw = proposal.action === 'buy' ? probs.buy : proposal.action === 'sell' ? probs.sell : probs.hold;
+      const world = proposal.venue === 'world';
+      const action = world
+        ? (proposal.action === 'up' ? 'UPP' : proposal.action === 'down' ? 'NED' : 'AVSTÅR')
+        : (proposal.action === 'buy' ? 'RID' : proposal.action === 'sell' ? 'STÄNG' : 'AVVAKTA');
+      const raw = world
+        ? (proposal.action === 'up' ? probs.buy : proposal.action === 'down' ? probs.sell : probs.hold)
+        : (proposal.action === 'buy' ? probs.buy : proposal.action === 'sell' ? probs.sell : probs.hold);
       const pct = Math.round(Number(raw || 0) * 100);
       return {
         id: row.id,
@@ -396,4 +499,4 @@ function loadBoard(db: any, userId: number): any {
   };
 }
 
-module.exports = { loadBoard, percentFrom, money, sv, svMoney };
+module.exports = { loadBoard, worldPanel, percentFrom, money, sv, svMoney };

@@ -9,7 +9,11 @@ const { verifyAudit } = require('../lib/paper/audit');
 const { evaluateGuard, validateLimits, clampLimits, marginMultiplier, dailyLossTripped, rollUtcDay } = require('../lib/tifi/guard.ts');
 const { breakoutSignal, trendSignal, momentumRank, momentumSignal } = require('../lib/tifi/strategies.ts');
 const { parseTigerSentence } = require('../lib/tifi/parser.ts');
-const { createVenue, LIVE_MESSAGE } = require('../lib/tifi/venue.ts');
+const { createVenue, LIVE_MESSAGE, WORLD_LIVE_MESSAGE, executeLiveWorld } = require('../lib/tifi/venue.ts');
+const { mapMarket, mapMarketList, createWorldFeed, simulatedReference, parseWorldStreamChunk } = require('../lib/tifi/world-feed.ts');
+const { evaluateWorldGuard } = require('../lib/tifi/world-guard.ts');
+const { quoteBuy, quoteSell, positionValue, settlementPayout, buyShares, settlePosition, feeBpsAt } = require('../lib/tifi/world-venue.ts');
+const { decideWorldTiger } = require('../lib/tifi/world-decide.ts');
 const { createDecisionModel } = require('../lib/tifi/model.ts');
 const { decideTiger } = require('../lib/tifi/decide.ts');
 const { seedDemo } = require('../lib/tifi/seed.ts');
@@ -99,6 +103,236 @@ test('svMoney with 0 decimals has no trailing comma', () => {
   assert.equal(svMoney(1_034_000_000n, 0), '1\u00a0034');
   assert.equal(svMoney(0n, 0), '0');
   assert.equal(String(svMoney(34_000_000n, 0)).endsWith(','), false);
+});
+
+function worldCtx(extra: any = {}): any {
+  return {
+    nowIso: '2026-10-01T12:05:00.000Z',
+    action: 'up',
+    outcome: 'UP',
+    side: 'buy',
+    marketId: 'm1',
+    closesAt: '2026-10-01T12:15:00.000Z',
+    leverage: 1,
+    stakePct: 10,
+    maxStakePct: 10,
+    closeBufferSec: 60,
+    cashMicro: 100_000_000n,
+    openStakeMicro: 0n,
+    feeBps: 100,
+    minOrderMicro: 0n,
+    tradesToday: 0,
+    maxTradesPerDay: 3,
+    lastTradeAt: null,
+    cooldownSec: 60,
+    status: 'active',
+    pauseReason: null,
+    ...extra,
+  };
+}
+
+test('simulated world feed moves and resolves without a network', async () => {
+  let fetched = false;
+  const early = createWorldFeed({}, {
+    now: () => new Date('2026-10-01T12:00:30.000Z'),
+    fetchImpl: async () => { fetched = true; throw new Error('network'); },
+  });
+  const later = createWorldFeed({}, { now: () => new Date('2026-10-01T12:05:30.000Z') });
+  const next = createWorldFeed({}, { now: () => new Date('2026-10-01T12:16:00.000Z') });
+  const first = await early.listActive();
+  const second = await later.listActive();
+  const third = await next.listActive();
+  assert.equal(fetched, false);
+  assert.equal(first.live, false);
+  assert.equal(first.source, 'simulated');
+  assert.deepEqual(first.markets.map((market: any) => market.seriesTicker), ['WXBTC15M', 'WXETH15M', 'WXSOL15M']);
+  assert.deepEqual(first.markets.map((market: any) => market.underlying), ['BTC', 'ETH', 'SOL']);
+  assert.equal(first.markets[0].outcomes[0].label, 'YES');
+  assert.equal(first.markets[0].outcomes[1].label, 'NO');
+  assert.equal(first.markets[0].source, 'simulated');
+  assert.equal(first.markets[0].id, second.markets[0].id);
+  assert.notEqual(first.markets[0].outcomes[0].mid, second.markets[0].outcomes[0].mid);
+  assert.notEqual(third.markets[0].id, first.markets[0].id);
+  const resolved = await next.getMarket(first.markets[0].id);
+  const start = Date.parse(first.markets[0].opensAt);
+  const winner = simulatedReference(start + 15 * 60 * 1000) >= simulatedReference(start) ? 'YES' : 'NO';
+  assert.equal(resolved.resolution.resolved, true);
+  assert.equal(resolved.resolution.winningOutcome, winner);
+  assert.equal(resolved.status, 'finalized');
+  const renamed = await createWorldFeed({ WORLD_SERIES_ETH: 'CUSTOMETH' }, {
+    now: () => new Date('2026-10-01T12:00:30.000Z'),
+  }).listActive();
+  assert.equal(renamed.markets[1].seriesTicker, 'CUSTOMETH');
+  assert.equal(renamed.markets[1].underlying, 'ETH');
+});
+
+test('world adapter maps a sample payload and ignores non-local urls', async () => {
+  const sample = {
+    ticker: 'WXBTC15M-1',
+    seriesTicker: 'WXBTC15M',
+    openTime: '2026-10-01T12:00:00.000Z',
+    closeTime: '2026-10-01T12:15:00.000Z',
+    status: 'active',
+    result: '',
+    yesBid: 0.46,
+    yesAsk: 0.5,
+    noBid: 0.5,
+    noAsk: 0.54,
+    source: 'simulated',
+    fetchedAt: '2026-10-01T12:01:00.000Z',
+    accounts: { marketLedger: 'led', yesMint: 'ym', noMint: 'nm' },
+  };
+  const market = mapMarket(sample);
+  assert.equal(market.id, 'WXBTC15M-1');
+  assert.equal(market.seriesTicker, 'WXBTC15M');
+  assert.equal(market.underlying, 'BTC');
+  assert.equal(market.outcomes[0].label, 'YES');
+  assert.equal(market.outcomes[0].mid, 0.48);
+  assert.equal(market.outcomes[0].mint, 'ym');
+  assert.equal(market.outcomes[1].label, 'NO');
+  assert.equal(market.source, 'simulated');
+  assert.equal(market.fetchedAt, '2026-10-01T12:01:00.000Z');
+  assert.equal(market.resolution.resolved, false);
+  assert.equal((market as any).accounts, undefined);
+  const finalized = mapMarket({ ...sample, status: 'finalized', result: 'no', yesBid: 0, yesAsk: 0, noBid: 1, noAsk: 1 });
+  assert.equal(finalized.resolution.resolved, true);
+  assert.equal(finalized.resolution.winningOutcome, 'NO');
+  const legacy = mapMarket({
+    id: 'old',
+    underlying: 'ETH',
+    status: 'active',
+    outcomes: [{ label: 'up', bid: 0.4, ask: 0.42 }],
+    source: 'chain',
+    fetchedAt: '2026-10-01T12:01:00.000Z',
+  });
+  assert.equal(legacy.outcomes[0].label, 'YES');
+  assert.equal(legacy.source, 'chain');
+  assert.equal(mapMarket({ title: 'saknar id' }), null);
+  assert.equal(mapMarketList({ markets: [sample, { nope: true }] }).length, 1);
+  const events = parseWorldStreamChunk('data: ' + JSON.stringify(sample) + '\n\n');
+  assert.equal(events[0].id, 'WXBTC15M-1');
+  assert.equal(events[0].source, 'simulated');
+  let called = false;
+  const remote = createWorldFeed({ WORLD_FEED_URL: 'https://example.com/markets' }, {
+    fetchImpl: async () => { called = true; return { ok: true, json: async () => [] }; },
+  });
+  const snap = await remote.listActive();
+  assert.equal(called, false);
+  assert.equal(snap.live, false);
+  const local = createWorldFeed({ WORLD_FEED_URL: 'http://127.0.0.1:8793' }, {
+    fetchImpl: async (url: string) => {
+      assert.equal(url, 'http://127.0.0.1:8793/api/world/markets?status=active');
+      return { ok: true, json: async () => [sample] };
+    },
+  });
+  const live = await local.listActive();
+  assert.equal(live.live, true);
+  assert.equal(live.markets[0].outcomes[1].label, 'NO');
+  assert.equal(live.markets[0].source, 'simulated');
+});
+
+test('world feed module has no trading client and no remote default', () => {
+  const names = ['world-feed.ts', 'world-venue.ts', 'world-decide.ts', 'world-guard.ts'];
+  const blob = names.map((name) => fs.readFileSync(path.join(__dirname, '../lib/tifi', name), 'utf8')).join('\n');
+  assert.equal(/workers\.dev|markets-api-proxy/i.test(blob), false);
+  assert.equal(/paybox/i.test(fs.readFileSync(path.join(__dirname, '../lib/tifi/world-feed.ts'), 'utf8')), false);
+  const pkg = fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8');
+  assert.equal(/paybox/i.test(pkg), false);
+});
+
+test('prediction-market settlement pays 1 DEMO or 0', () => {
+  const clean = quoteBuy(10_000_000n, 500_000n, 0);
+  assert.ok(clean);
+  assert.equal(clean.sharesMicro, 20_000_000n);
+  assert.equal(clean.costMicro, 10_000_000n);
+  assert.equal(clean.feeMicro, 0n);
+  assert.equal(positionValue(clean.sharesMicro, 500_000n), 10_000_000n);
+  assert.equal(settlementPayout(clean.sharesMicro, true), 20_000_000n);
+  assert.equal(settlementPayout(clean.sharesMicro, false), 0n);
+  const sold = quoteSell(clean.sharesMicro, 480_000n, 0);
+  assert.equal(sold.cashDeltaMicro, 9_600_000n);
+  const withFee = quoteBuy(10_000_000n, 500_000n, 100);
+  assert.ok(withFee.feeMicro > 0n);
+  assert.ok(withFee.costMicro + withFee.feeMicro <= 10_000_000n);
+  assert.equal(feeBpsAt(500_000n, 800), 400);
+  assert.equal(feeBpsAt(0n, 800), 800);
+  assert.equal(feeBpsAt(1_000_000n, 800), 0);
+  const curved = quoteBuy(10_000_000n, 500_000n, feeBpsAt(500_000n, 800));
+  assert.equal(curved.feeMicro, curved.costMicro * 400n / 10000n);
+});
+
+test('prediction-market guards block leverage, the close, the stake and the caps', () => {
+  assert.equal(evaluateWorldGuard(worldCtx()).verdict, 'allow');
+  assert.equal(evaluateWorldGuard(worldCtx({ leverage: 2 })).codes[0], 'NO_LEVERAGE');
+  assert.equal(evaluateWorldGuard(worldCtx({ nowIso: '2026-10-01T12:14:30.000Z' })).codes[0], 'CLOSE_BUFFER');
+  assert.equal(evaluateWorldGuard(worldCtx({ stakePct: 50 })).codes[0], 'STAKE');
+  assert.equal(evaluateWorldGuard(worldCtx({ openStakeMicro: 10_000_000n })).codes[0], 'STAKE');
+  assert.equal(evaluateWorldGuard(worldCtx({ tradesToday: 3 })).codes[0], 'TRADE_CAP');
+  assert.equal(evaluateWorldGuard(worldCtx({ lastTradeAt: '2026-10-01T12:04:30.000Z' })).codes[0], 'COOLDOWN');
+  assert.equal(evaluateWorldGuard(worldCtx({ action: 'abstain', outcome: null, side: null })).codes[0], 'ABSTAIN');
+  assert.equal(evaluateWorldGuard(worldCtx({ cashMicro: 500_000n })).verdict, 'allow');
+});
+
+test('real world or paybox execution stays locked', () => {
+  assert.throws(() => executeLiveWorld(), (err: any) => {
+    return err.code === 'LIVE_LOCKED' && /Riktiga pengar är inte tillåtna/.test(err.message) && /sagt nej/.test(err.message);
+  });
+  assert.throws(() => createVenue('paybox', { placeOrder: async () => null }), (err: any) => err.code === 'LIVE_LOCKED' && err.message === WORLD_LIVE_MESSAGE + ' Begärt läge: paybox.');
+  assert.equal(LIVE_MESSAGE.length > 0, true);
+});
+
+test('a world decision is logged before a paper fill, and settlement is idempotent', async () => {
+  const ctx = openDb();
+  try {
+    const seeded = await seedDemo(ctx.db, {
+      username: 'world',
+      password: 'tifi-demo',
+      ownerPassword: 'tigerpapper-2026',
+      steps: 0,
+    });
+    const tiger = ctx.db.prepare('SELECT * FROM tifi_tigers WHERE user_id = ? AND slot = 1').get(seeded.userId);
+    const now = '2026-10-01T12:05:00.000Z';
+    await assert.rejects(decideWorldTiger(ctx.db, tiger, {
+      bars: [],
+      nowIso: now,
+      model: {
+        id: 'fake-local',
+        async propose() {
+          return proposal({ symbol: 'BTC', rationale: 'Simulerad testpost. Ingen rekommendation.' });
+        },
+      },
+      feed: createWorldFeed({}, { now: () => new Date(now) }),
+      env: {},
+      execute: async () => {
+        const row = ctx.db.prepare(`SELECT action FROM paper_audit_log WHERE action = 'tifi_decision' ORDER BY id DESC LIMIT 1`).get();
+        assert.equal(row.action, 'tifi_decision');
+        const fills = ctx.db.prepare('SELECT COUNT(*) AS n FROM tifi_world_fills WHERE tiger_id = ?').get(tiger.id);
+        assert.equal(fills.n, 0);
+        throw new Error('halt-before-fill');
+      },
+    }), /halt-before-fill/);
+    const bought = buyShares(ctx.db, {
+      tiger,
+      market: {
+        id: 'm-settle',
+        title: 'BTC upp eller ned, 15 min',
+        outcomes: [{ label: 'YES', bid: 0.48, ask: 0.5, mid: 0.49 }],
+      },
+      outcome: 'YES',
+      budgetMicro: 10_000_000n,
+      feeBps: 0,
+      ts: now,
+    });
+    assert.equal(bought.ok, true);
+    const position = ctx.db.prepare('SELECT * FROM tifi_world_positions WHERE tiger_id = ? AND market_id = ?').get(tiger.id, 'm-settle');
+    const settled = settlePosition(ctx.db, { tiger, position, winningOutcome: 'YES', ts: '2026-10-01T12:15:00.000Z' });
+    assert.equal(settled.payoutMicro, bought.ticket.sharesMicro);
+    const again = ctx.db.prepare('SELECT * FROM tifi_world_positions WHERE tiger_id = ? AND market_id = ?').get(tiger.id, 'm-settle');
+    assert.equal(settlePosition(ctx.db, { tiger, position: again, winningOutcome: 'YES', ts: '2026-10-01T12:15:00.000Z' }).code, 'SETTLED');
+    assert.equal(verifyAudit(ctx.db).ok, true);
+  } finally {
+    ctx.close();
+  }
 });
 
 test('guard rejects each limit and keeps leverage at 1x', () => {
@@ -300,6 +534,25 @@ test('treasury split and dashboard are paper only', async () => {
     assert.match(page.text, /TIFI 2/);
     assert.match(page.text, /TIFI 3/);
     assert.match(page.text, /AI-tiger/);
+    assert.match(page.text, /World-marknader \(papper, endast eget bruk, simulerat\/kedjedata\)/);
+    assert.match(page.text, /Simulerat flöde/);
+    assert.match(page.text, /class="sim-flag">simulerat</);
+    assert.match(page.text, /WXBTC15M/);
+    assert.match(page.text, /WXETH15M/);
+    assert.match(page.text, /WXSOL15M/);
+    assert.match(page.text, /Ingen export, ingen delning och ingen offentlig visning/);
+    const tiger = ctx.db.prepare('SELECT id, venue FROM tifi_tigers WHERE slot = 1').get();
+    assert.equal(tiger.venue, 'world');
+    const token = page.text.match(/name="_csrf" value="([a-f0-9]+)"/);
+    assert.ok(token);
+    await agent.post('/tifi/tigers/' + tiger.id + '/venue').type('form').send({
+      _csrf: token[1], venue: 'paper', owner_password: 'fel-losenord',
+    }).expect(302);
+    assert.equal(ctx.db.prepare('SELECT venue FROM tifi_tigers WHERE id = ?').get(tiger.id).venue, 'world');
+    await agent.post('/tifi/tigers/' + tiger.id + '/venue').type('form').send({
+      _csrf: token[1], venue: 'paper', owner_password: 'tigerpapper-2026',
+    }).expect(302);
+    assert.equal(ctx.db.prepare('SELECT venue FROM tifi_tigers WHERE id = ?').get(tiger.id).venue, 'paper');
     const state = await agent.get('/tifi/api/state').expect(200);
     assert.equal(state.body.demo, true);
     assert.equal(state.body.notice, 'DEMO – inga riktiga pengar');
