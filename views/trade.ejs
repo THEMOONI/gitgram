@@ -1,0 +1,186 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="/css/wallet.css">
+<link rel="stylesheet" href="/css/trade.css">
+<div class="wallet-page trade-page" data-demo="true" data-notice="<%= notice %>">
+  <div class="wpage">
+    <div class="wrap">
+      <div class="crumbs mono"><a href="/wallet">wallet</a> <span>/</span> paper</div>
+      <div class="whead">
+        <div>
+          <div class="kicker">Paper trading · demo</div>
+          <h1 class="wh1">Paper trade</h1>
+          <p class="wsub">Simulated orders in GGT (demo). The engine books the ledger. Nothing here is a broker order or a promise of a return.</p>
+        </div>
+        <div class="whead-actions">
+          <span class="demo-pill">● Demo environment</span>
+          <a class="btn btn-line" href="/trade/backtest">Run a backtest</a>
+        </div>
+      </div>
+
+      <section class="dframe" aria-label="Demo notice">
+        <div class="dbanner"><b>DEMO MODE</b><span>· <%= notice %> · simulated data · no real money</span></div>
+        <p class="trade-note"><%= simulatedLabel %></p>
+      </section>
+
+      <% if (formError) { %>
+        <p class="hint err trade-alert" id="risk-error" role="alert"><%= formCode ? formCode + ' — ' : '' %><%= formError %></p>
+      <% } %>
+      <% if (formOk) { %>
+        <p class="hint ok trade-alert" role="status"><%= formOk %></p>
+      <% } %>
+
+      <% if (blocked) { %>
+        <section class="dframe">
+          <div class="empty">
+            <b>Region blocked</b>
+            <p><%= formError %></p>
+          </div>
+        </section>
+      <% } else if (!portfolio) { %>
+        <section class="dframe" aria-labelledby="open-h">
+          <div class="dbanner"><b>DEMO MODE</b><span>· move demo units into a paper portfolio</span></div>
+          <form class="tform" id="open-portfolio" method="POST" action="/trade/open">
+            <h2 class="h3" id="open-h">Open a paper portfolio</h2>
+            <p class="tnote">Wallet balance <%= walletBalance %> GGT <span class="dm">(demo)</span>. Allocation is capped at 1,000.00 and stays inside this demo.</p>
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="idempotency_key" value="<%= idempotencyKey %>">
+            <div class="fg">
+              <label for="allocate-amount">Amount to allocate</label>
+              <div class="inp">
+                <input id="allocate-amount" name="amount" inputmode="decimal" value="200.00" required>
+                <span class="suf">GGT (demo)</span>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-lg" type="submit">Open paper portfolio</button>
+            <p class="sim">Simulated allocation · <%= notice %></p>
+          </form>
+        </section>
+      <% } else { %>
+        <div class="wgrid">
+          <div class="wcol">
+            <section class="dframe" aria-labelledby="eq-h">
+              <div class="dbanner"><b>DEMO MODE</b><span>· <%= portfolio.status === 'paused' ? 'paused' : 'active' %> · simulated marks</span></div>
+              <div class="bal-body">
+                <div class="bal-main">
+                  <div class="lbl" id="eq-h">Paper equity</div>
+                  <div class="bal-big mono"><%= portfolio.equity %> <span class="unit">GGT</span> <span class="dm">(demo)</span></div>
+                  <div class="bal-sub mono">Cash <%= portfolio.cash %> GGT <span class="dm">(demo)</span> · drawdown <%= portfolio.drawdownPct %>%</div>
+                  <% if (portfolio.status === 'paused') { %>
+                    <p class="hint err" id="kill-switch">Kill switch or owner pause. Only the owner can resume. Open buys are cancelled. Protective stops stay.</p>
+                  <% } %>
+                </div>
+                <div class="bal-stats">
+                  <div class="stat"><div class="lbl">Status</div><div class="mono"><%= portfolio.status %></div></div>
+                  <div class="stat"><div class="lbl">Parked in wallet custody</div><div class="mono"><%= portfolio.parked %> GGT <span class="dm">(demo)</span></div></div>
+                  <div class="stat"><div class="lbl">Max position</div><div class="mono"><%= portfolio.risk.maxPositionPct %>%</div></div>
+                </div>
+              </div>
+              <p class="attr" id="price-attribution">
+                <% if (attribution.url) { %>
+                  <span>Powered by CoinGecko</span>
+                  <a href="<%= attribution.url %>">Data provided by CoinGecko</a>
+                <% } else { %>
+                  <span><%= attribution.powered %></span>
+                  <span><%= attribution.provided %></span>
+                <% } %>
+              </p>
+            </section>
+
+            <section class="dframe" aria-labelledby="pos-h">
+              <div class="dbanner"><b>DEMO MODE</b><span>· simulated positions</span></div>
+              <div class="hist-head"><h2 class="h3" id="pos-h">Positions</h2></div>
+              <% if (!positions.length) { %>
+                <div class="empty" id="positions"><b>No simulated position yet</b><p>Place a paper order. The fill is simulated.</p></div>
+              <% } else { %>
+                <table class="tx" id="positions">
+                  <thead><tr><th>Symbol</th><th>Qty</th><th class="r">Avg cost</th><th class="r">Market value</th></tr></thead>
+                  <tbody>
+                    <% positions.forEach(function (pos) { %>
+                      <tr id="position-<%= pos.symbol %>">
+                        <td class="mono"><%= pos.symbol %></td>
+                        <td class="mono"><%= pos.qty %></td>
+                        <td class="r mono"><%= pos.avgCost %> GGT <span class="dm">(demo)</span></td>
+                        <td class="r mono"><%= pos.marketValue %> GGT <span class="dm">(demo)</span></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              <% } %>
+              <div class="hist-foot"><span>Values are simulated portfolio marks. <%= simulatedLabel %>.</span></div>
+            </section>
+
+            <section class="dframe" aria-labelledby="ord-h">
+              <div class="hist-head"><h2 class="h3" id="ord-h">Recent simulated orders</h2></div>
+              <% if (!orders.length) { %>
+                <div class="empty"><b>No orders yet</b></div>
+              <% } else { %>
+                <table class="tx">
+                  <thead><tr><th>Order</th><th>Status</th><th class="r">Qty</th></tr></thead>
+                  <tbody>
+                    <% orders.forEach(function (order) { %>
+                      <tr>
+                        <td><span class="mono"><%= order.side %> <%= order.symbol %></span><div class="t"><%= order.type %><% if (order.protective) { %> · protective stop<% } %></div></td>
+                        <td><%= order.status %><% if (order.rejectMessage) { %><div class="t"><%= order.rejectMessage %></div><% } %></td>
+                        <td class="r mono"><%= order.qty %></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              <% } %>
+            </section>
+          </div>
+
+          <aside class="wcol">
+            <section class="dframe" id="order" aria-labelledby="place-h">
+              <div class="dbanner"><b>DEMO MODE</b><span>· paper order</span></div>
+              <form class="tform" id="place-order" method="POST" action="/trade/orders">
+                <h2 class="h3" id="place-h">Place a paper order</h2>
+                <p class="tnote">Buys require a stop-loss. The engine can tighten the default but will not accept a wider stop. No leverage and no shorting.</p>
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="client_order_id" value="<%= orderKey %>">
+                <div class="fg">
+                  <label for="order-symbol">Symbol</label>
+                  <div class="inp"><select id="order-symbol" name="symbol">
+                    <% instruments.forEach(function (item) { %><option value="<%= item.symbol %>"><%= item.symbol %></option><% }) %>
+                  </select></div>
+                </div>
+                <div class="fg">
+                  <label for="order-side">Side</label>
+                  <div class="inp"><select id="order-side" name="side"><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+                </div>
+                <div class="fg">
+                  <label for="order-type">Type</label>
+                  <div class="inp"><select id="order-type" name="type"><option value="market">Market</option><option value="limit">Limit</option><option value="stop">Stop (sell only)</option></select></div>
+                </div>
+                <div class="fg">
+                  <label for="order-notional">Size, percent of equity</label>
+                  <div class="inp"><input id="order-notional" name="notional_pct" inputmode="numeric" value="10"></div>
+                </div>
+                <div class="fg">
+                  <label for="order-stop">Stop-loss percent</label>
+                  <div class="inp"><input id="order-stop" name="stop_loss_pct" inputmode="numeric" value="12"></div>
+                  <p class="hint">Default 12. A smaller number is a tighter stop.</p>
+                </div>
+                <div class="fg">
+                  <label for="order-limit">Limit or stop price <span class="opt">optional</span></label>
+                  <div class="inp"><input id="order-limit" name="limit_price" inputmode="decimal" placeholder="100.00"><input type="hidden" name="stop_price" value=""></div>
+                </div>
+                <button class="btn btn-primary btn-lg btn-full" type="submit">Place simulated order</button>
+                <p class="sim">Simulated fill · <%= notice %></p>
+              </form>
+            </section>
+            <section class="dframe">
+              <form class="tform" method="POST" action="/trade/<%= portfolio.status === 'paused' ? 'resume' : 'pause' %>">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button class="btn btn-line btn-full" type="submit"><%= portfolio.status === 'paused' ? 'Resume trading (owner)' : 'Pause trading' %></button>
+              </form>
+            </section>
+          </aside>
+        </div>
+      <% } %>
+      <p class="geo-note"><%= geoNote %></p>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>

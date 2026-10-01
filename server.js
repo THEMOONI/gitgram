@@ -7,6 +7,7 @@ const Database = require('better-sqlite3');
 const moment = require('moment');
 const { csrfProtection } = require('./lib/csrf');
 const { ensureLedgerSchema } = require('./lib/ledger');
+const { ensurePaperSchema } = require('./lib/paper/schema');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
 let warnedAboutSessionSecret = false;
@@ -64,6 +65,7 @@ function createApp(options = {}) {
 
   const db = openDatabase(dbPath);
   ensureLedgerSchema(db);
+  ensurePaperSchema(db);
   const app = express();
   const port = process.env.PORT || 3000;
   const csrf = csrfProtection();
@@ -100,12 +102,20 @@ function createApp(options = {}) {
     res.locals.moment = moment;
     res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + port;
     res.locals.navWallet = false;
+    res.locals.navTrade = false;
     next();
   });
 
   app.use('/', require('./routes/auth')(db));
   // Wallet routes are registered before /:owner/:repo so /wallet is never a profile or repository.
   app.use('/', require('./routes/wallet')(db));
+  app.use('/', require('./routes/paper')(db, {
+    dataDir,
+    priceFeed: options.priceFeed,
+    clock: options.clock,
+    geo: options.geo,
+    priceCacheKey: options.priceCacheKey,
+  }));
   app.use('/', require('./routes/git')(db, { dataDir }));
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));
