@@ -5,3 +5,5 @@ db/*.db
 db/*.db-shm
 db/*.db-wal
 db/*.db-journal
+exclude.json
+config/trading-exclude.json

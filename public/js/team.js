@@ -35,6 +35,14 @@ function severityClass(value) {
   return 'unknown';
 }
 
+function riskClass(value) {
+  if (value === 'LÅG') return 'lag';
+  if (value === 'MEDEL') return 'medel';
+  if (value === 'HÖG') return 'hog';
+  if (value === 'EXTREM') return 'extrem';
+  return 'unknown';
+}
+
 function micSupported(nav) {
   return Boolean(nav && nav.mediaDevices && typeof nav.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined');
 }
@@ -90,6 +98,55 @@ function renderMessageHtml(message, options = {}) {
   </article>`;
 }
 
+function renderTradingAlertHtml(alert, options = {}) {
+  const reasons = (alert.reasons || []).map((reason) => `<li>${escapeHtml(reason)}</li>`).join('');
+  const href = safeDexScreenerUrl(alert.safeUrl || alert.link, alert.mint);
+  const link = href
+    ? `<p><a href="${escapeHtml(href)}" rel="noopener noreferrer" target="_blank">DEX Screener</a></p>`
+    : '';
+  const acks = (alert.acknowledgements || []).map((ack) => (
+    `<li>Acknowledged by ${escapeHtml(ack.username)} at <time datetime="${escapeHtml(ack.createdAt)}">${escapeHtml(ack.displayTime || '')}</time></li>`
+  )).join('');
+  const csrf = escapeHtml(options.csrfToken || '');
+  const symbol = alert.symbol ? `<span class="team-author">${escapeHtml(alert.symbol)}</span>` : '';
+  const name = alert.name ? `<span>${escapeHtml(alert.name)}</span>` : '';
+  return `<article class="team-trading-card" id="trading-alert-${Number(alert.id)}" data-external-id="${escapeHtml(alert.externalId || '')}" data-mint="${escapeHtml(alert.mint || '')}" data-stage="${escapeHtml(alert.stage || '')}" data-label="${escapeHtml(alert.label || '')}">
+    <p class="team-demo-banner">${escapeHtml(alert.demoLabel || '')}</p>
+    <header class="team-msg-head">
+      <span class="team-risk-badge ${riskClass(alert.label)}">${escapeHtml(alert.label || '')}</span>
+      <span class="team-score">Risk score ${Number(alert.score)}</span>
+      ${symbol}
+      ${name}
+      <time datetime="${escapeHtml(alert.createdAt || '')}">${escapeHtml(alert.displayTime || '')}</time>
+    </header>
+    <p class="team-body">${escapeHtml(alert.summary || '')}</p>
+    ${reasons ? `<ul class="team-risks">${reasons}</ul>` : ''}
+    <p class="team-source">Source <span>${escapeHtml(alert.source || '')}</span></p>
+    ${link}
+    <p class="team-demo-banner">${escapeHtml(alert.disclaimer || '')}</p>
+    <ul class="team-acks">${acks}</ul>
+    <form method="post" action="/api/team/trading-alerts/${Number(alert.id)}/ack">
+      <input type="hidden" name="_csrf" value="${csrf}">
+      <button type="submit" class="tbtn tbtn-secondary">Acknowledge</button>
+    </form>
+  </article>`;
+}
+
+function safeDexScreenerUrl(value, mint) {
+  const href = safeHttpUrl(value);
+  if (!href || typeof mint !== 'string' || !mint) return '';
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase();
+    if (host !== 'dexscreener.com' && host !== 'www.dexscreener.com') return '';
+    if (url.username || url.password || url.search || url.hash) return '';
+    if (url.pathname !== `/solana/${mint}`) return '';
+    return `${url.protocol}//${url.host}${url.pathname}`;
+  } catch {
+    return '';
+  }
+}
+
 function renderFlagHtml(flag, options = {}) {
   const href = safeHttpUrl(flag.safeUrl || flag.sourceUrl);
   const projects = (flag.affectedProjects || []).map((project) => `<span class="team-chip">${escapeHtml(project)}</span>`).join('') || '<span>Inga</span>';
@@ -136,8 +193,94 @@ function initTeam(doc) {
     return true;
   }
 
+  function alertPassesFilter(alert) {
+    const filters = bootstrap.filters || {};
+    if (filters.risk && alert.label !== filters.risk) return false;
+    const acked = (alert.acknowledgements || []).length > 0;
+    if (filters.ack === 'open' && acked) return false;
+    if (filters.ack === 'done' && !acked) return false;
+    return true;
+  }
+
+  function playNotice(sound) {
+    if (!sound || !rootDoc.defaultView) return;
+    const Ctx = rootDoc.defaultView.AudioContext || rootDoc.defaultView.webkitAudioContext;
+    if (!Ctx) return;
+    try {
+      const audio = new Ctx();
+      const osc = audio.createOscillator();
+      const gain = audio.createGain();
+      osc.frequency.value = 660;
+      gain.gain.value = 0.02;
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start();
+      osc.stop(audio.currentTime + 0.12);
+      osc.onended = () => audio.close();
+    } catch {
+      /* autoplay or audio devices can be unavailable */
+    }
+  }
+
+  function upsertTradingAlert(alert) {
+    if (!log || !alert || !alertPassesFilter(alert)) return;
+    const html = renderTradingAlertHtml(alert, { csrfToken: bootstrap.csrfToken });
+    const existing = rootDoc.getElementById(`trading-alert-${Number(alert.id)}`);
+    if (existing) {
+      existing.outerHTML = html;
+      return;
+    }
+    if (alert.stage === 'uppföljning') {
+      rootDoc.querySelectorAll('[data-mint]').forEach((node) => {
+        if (node.getAttribute('data-mint') === alert.mint) node.remove();
+      });
+    }
+    rootDoc.querySelectorAll('[data-external-id]').forEach((node) => {
+      if (node.getAttribute('data-external-id') === alert.externalId) node.remove();
+    });
+    if (!remember(`trading-alert-${alert.id}`)) return;
+    log.insertAdjacentHTML('beforeend', html);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function showNotice(notice) {
+    if (!log || !notice) return;
+    if (notice.digest) {
+      const text = `${notice.text || ''} ${bootstrap.tradingNoticeDisclaimer || ''}`.trim();
+      const html = `<p class="team-trading-notice${notice.sound ? '' : ' is-quiet'}" id="trading-digest" data-sound="${notice.sound ? '1' : '0'}">${escapeHtml(text)}</p>`;
+      const current = rootDoc.getElementById('trading-digest');
+      if (current) current.outerHTML = html;
+      else log.insertAdjacentHTML('afterbegin', html);
+      playNotice(notice.sound);
+      return;
+    }
+    const html = `<p class="team-trading-notice${notice.sound ? '' : ' is-quiet'}" data-sound="${notice.sound ? '1' : '0'}">${escapeHtml(notice.text || '')}</p>`;
+    log.insertAdjacentHTML('afterbegin', html);
+    playNotice(notice.sound);
+  }
+
+  function showWatcherStatus(offline, text) {
+    let node = rootDoc.getElementById('trading-watcher-status');
+    if (!offline) {
+      if (node) node.remove();
+      return;
+    }
+    if (!node) {
+      const head = rootDoc.getElementById('trading-channel-disclaimer');
+      if (!head) return;
+      head.insertAdjacentHTML('beforeend', `<p class="team-watcher-status" id="trading-watcher-status"></p>`);
+      node = rootDoc.getElementById('trading-watcher-status');
+    }
+    node.textContent = text || bootstrap.tradingWatcherOffline || '';
+  }
+
   function appendItem(item) {
-    if (!item || (item.kind === 'flag' ? !remember(`flag-${item.id}`) : !remember(`message-${item.id}`))) return;
+    if (!item) return;
+    if (item.kind === 'trading_alert') {
+      upsertTradingAlert(item);
+      return;
+    }
+    if (item.kind === 'flag' ? !remember(`flag-${item.id}`) : !remember(`message-${item.id}`)) return;
     const html = item.kind === 'flag'
       ? renderFlagHtml(item, { csrfToken: bootstrap.csrfToken })
       : renderMessageHtml(item, {
@@ -354,6 +497,9 @@ function initTeam(doc) {
       if (payload.room && payload.room !== bootstrap.room) return;
       if (payload.type === 'message') appendItem(payload.message);
       if (payload.type === 'flag') appendItem(payload.flag);
+      if (payload.type === 'trading_alert') upsertTradingAlert(payload.alert);
+      if (payload.type === 'trading_notice') showNotice(payload.notice);
+      if (payload.type === 'trading_status') showWatcherStatus(payload.offline, payload.text);
     });
   }
 }
@@ -366,6 +512,8 @@ if (typeof module !== 'undefined' && module.exports) {
     safeHttpUrl,
     renderMessageHtml,
     renderFlagHtml,
+    renderTradingAlertHtml,
+    safeDexScreenerUrl,
     voiceNotes,
     micSupported,
     pushToTalkBlocked,
