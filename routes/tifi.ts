@@ -189,6 +189,10 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     }
   });
 
+  router.get('/bots', requireUser, (_req: any, res: any) => {
+    res.redirect('/tifi');
+  });
+
   router.get('/tifi', requireUser, (req: any, res: any) => {
     const row = setup.setupRow(db, req.tifiUser.id);
     if (!row || !row.finished_at) return res.redirect('/tifi/setup');

@@ -38,7 +38,10 @@ function sv(raw: string): string {
 }
 
 function svMoney(micro: any, digits?: number): string {
-  return sv(formatMicro(asMicro(micro || 0), digits == null ? 2 : digits));
+  const places = digits == null ? 2 : digits;
+  let raw = formatMicro(asMicro(micro || 0), places);
+  if (places <= 0) raw = raw.replace(/\.$/, '');
+  return sv(raw);
 }
 
 function svSigned(micro: bigint, digits?: number): string {
@@ -393,4 +396,4 @@ function loadBoard(db: any, userId: number): any {
   };
 }
 
-module.exports = { loadBoard, percentFrom, money, sv };
+module.exports = { loadBoard, percentFrom, money, sv, svMoney };

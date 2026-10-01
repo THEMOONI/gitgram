@@ -14,6 +14,7 @@ const { createDecisionModel } = require('../lib/tifi/model.ts');
 const { decideTiger } = require('../lib/tifi/decide.ts');
 const { seedDemo } = require('../lib/tifi/seed.ts');
 const { splitEqual, freeMinor } = require('../lib/tifi/treasury.ts');
+const { svMoney } = require('../lib/tifi/board.ts');
 const engine = require('../lib/paper/engine');
 
 function bar(close: number, high?: number, low?: number, volume = 0): any {
@@ -90,6 +91,15 @@ function openDb() {
     },
   };
 }
+
+test('svMoney with 0 decimals has no trailing comma', () => {
+  assert.equal(svMoney(34_000_000n, 0), '34');
+  assert.equal(svMoney(34_120_000n, 0), '34');
+  assert.equal(svMoney(34_120_000n, 2), '34,12');
+  assert.equal(svMoney(1_034_000_000n, 0), '1\u00a0034');
+  assert.equal(svMoney(0n, 0), '0');
+  assert.equal(String(svMoney(34_000_000n, 0)).endsWith(','), false);
+});
 
 test('guard rejects each limit and keeps leverage at 1x', () => {
   assert.equal(marginMultiplier(), 1);
@@ -278,6 +288,10 @@ test('treasury split and dashboard are paper only', async () => {
     const csrf = loginPage.text.match(/name="_csrf" value="([a-f0-9]+)"/);
     assert.ok(csrf);
     await agent.post('/login').type('form').send({ username: 'tifi', password: 'tifi-demo', _csrf: csrf[1] }).expect(302);
+    await request(ctx.app).get('/bots').expect(302).expect('Location', '/login');
+    const bots = await agent.get('/bots');
+    assert.equal(bots.status, 302);
+    assert.equal(bots.headers.location, '/tifi');
     const page = await agent.get('/tifi').expect(200);
     assert.match(page.text, /DEMO – inga riktiga pengar/);
     assert.match(page.text, /PAPER TRADING/);
@@ -290,6 +304,9 @@ test('treasury split and dashboard are paper only', async () => {
     assert.equal(state.body.demo, true);
     assert.equal(state.body.notice, 'DEMO – inga riktiga pengar');
     assert.equal(state.body.board.leaderboard[0].equity, undefined);
+    for (const row of state.body.board.allocation) {
+      assert.equal(String(row.inPosition).endsWith(','), false);
+    }
   } finally {
     ctx.close();
   }
