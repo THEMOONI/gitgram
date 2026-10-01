@@ -1,0 +1,21 @@
+{
+  "maxHops": 3,
+  "contextMessages": 20,
+  "maxUploadBytes": 2097152,
+  "maxExtractedChars": 100000,
+  "promptExtractChars": 8000,
+  "messageMaxChars": 4000,
+  "contractPasteMaxChars": 50000,
+  "messageRateLimit": 30,
+  "flagRateLimit": 8,
+  "voiceUnavailableNotice": "Text only. No speech API key is set, so voice stays off.",
+  "micUnavailableNotice": "This browser has no microphone. You can still type.",
+  "retainVoiceAudio": false,
+  "aiAgentBadge": "AI-agent",
+  "aiGeneratedLabel": "AI-generated",
+  "voiceDisclosure": "Du pratar med en AI-agent",
+  "voiceCloudNotice": "Push-to-talk sends audio to a cloud speech provider for transcription.",
+  "voiceLocalNotice": "This server transcribes audio locally. When a cloud speech provider is configured, push-to-talk sends audio to that provider.",
+  "voiceRetentionNotice": "Voice recording is off by default. Audio is transcribed in memory and the raw recording is discarded.",
+  "voiceRetentionOnNotice": "Voice retention is enabled. Raw audio is stored on this server."
+}

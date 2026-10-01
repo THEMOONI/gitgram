@@ -1,3 +1,4 @@
+const http = require('http');
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
@@ -6,6 +7,13 @@ const compression = require('compression');
 const Database = require('better-sqlite3');
 const moment = require('moment');
 const { csrfProtection } = require('./lib/csrf');
+const { ensureTeamSchema } = require('./lib/team/schema');
+const { loadTeamConfig, resolveMaxHops } = require('./lib/team/config');
+const { createTeamService } = require('./lib/team/service');
+const { createHub, attachTeamRealtime } = require('./lib/team/realtime');
+const { createRateLimiter } = require('./lib/team/ratelimit');
+const { createVoiceProvider, voiceRetentionEnabled } = require('./lib/team/voice');
+const mountTeam = require('./routes/team');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
 let warnedAboutSessionSecret = false;
@@ -62,20 +70,32 @@ function createApp(options = {}) {
   fs.mkdirSync(path.join(dataDir, 'repos'), { recursive: true });
 
   const db = openDatabase(dbPath);
+  const teamConfig = loadTeamConfig();
+  ensureTeamSchema(db, teamConfig);
+  const maxHops = resolveMaxHops(teamConfig, process.env, options.maxHops);
+  const voice = options.voice || createVoiceProvider(process.env);
+  const retainVoiceAudio = voiceRetentionEnabled(teamConfig, process.env, options.retainVoiceAudio);
+  const flagsToken = options.flagsToken !== undefined ? options.flagsToken : (process.env.TEAM_FLAGS_TOKEN || '');
+  const messageLimiter = createRateLimiter({
+    windowMs: options.messageRateLimit?.windowMs || 60_000,
+    max: options.messageRateLimit?.max || teamConfig.messageRateLimit,
+  });
+  const flagLimiter = createRateLimiter({
+    windowMs: options.flagRateLimit?.windowMs || 60_000,
+    max: options.flagRateLimit?.max || teamConfig.flagRateLimit,
+  });
+  const hub = createHub();
+  const teamService = createTeamService(db, {
+    config: teamConfig,
+    dataDir,
+    maxHops,
+    hub,
+  });
+
   const app = express();
   const port = process.env.PORT || 3000;
   const csrf = csrfProtection();
-
-  app.disable('x-powered-by');
-  app.locals.db = db;
-  app.locals.dataDir = dataDir;
-
-  app.use(compression());
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-  app.use(express.static(path.join(__dirname, 'public')));
-
-  app.use(session({
+  const sessionMiddleware = session({
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -84,7 +104,29 @@ function createApp(options = {}) {
       httpOnly: true,
       sameSite: 'lax',
     },
+  });
+
+  app.disable('x-powered-by');
+  app.locals.db = db;
+  app.locals.dataDir = dataDir;
+  app.locals.teamHub = hub;
+  app.locals.teamService = teamService;
+  app.locals.teamMessageLimiter = messageLimiter;
+  app.locals.voice = voice;
+  app.locals.retainVoiceAudio = retainVoiceAudio;
+  app.locals.sessionMiddleware = sessionMiddleware;
+  app.locals.attachRealtime = (server) => attachTeamRealtime(server, app);
+
+  app.use(compression());
+  app.use(express.json({
+    limit: '4mb',
+    type: (req) => req.path.startsWith('/api/team') && /^application\/json/i.test(req.headers['content-type'] || ''),
   }));
+  app.use(express.json({ limit: '100kb' }));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.static(path.join(__dirname, 'public')));
+
+  app.use(sessionMiddleware);
   app.use(csrf.ensure);
   app.use(csrf.verify);
 
@@ -102,6 +144,16 @@ function createApp(options = {}) {
 
   app.use('/', require('./routes/auth')(db));
   app.use('/', require('./routes/git')(db, { dataDir }));
+  mountTeam(app, {
+    service: teamService,
+    voice,
+    config: teamConfig,
+    dataDir,
+    retainVoiceAudio,
+    flagsToken,
+    messageLimiter,
+    flagLimiter,
+  });
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));
 
@@ -128,7 +180,9 @@ if (require.main === module) {
   try {
     const app = createApp();
     const port = process.env.PORT || 3000;
-    app.listen(port, () => {
+    const server = http.createServer(app);
+    app.locals.attachRealtime(server);
+    server.listen(port, () => {
       console.log('🚀 GITGRAM running on http://localhost:' + port);
     });
   } catch (err) {

@@ -1,0 +1,47 @@
+{
+  "needsLawyerBadge": "Behöver riktig advokat",
+  "flagKindLabel": "Regelflagga",
+  "flagYes": "ja",
+  "flagNo": "nej",
+  "areas": [
+    { "id": "mica", "label": "MiCA" },
+    { "id": "web3", "label": "Web3/crypto" },
+    { "id": "licenses", "label": "Licenses/open source" },
+    { "id": "ai-act", "label": "AI Act (EU AI-förordningen)" },
+    { "id": "gdpr", "label": "GDPR/privacy" },
+    { "id": "contracts", "label": "Contracts" },
+    { "id": "general", "label": "General law" }
+  ],
+  "highStakesPatterns": [
+    "uncertain",
+    "osäker",
+    "high-stakes",
+    "high stakes",
+    "unlimited liability",
+    "stämning",
+    "böter",
+    "criminal",
+    "regulator",
+    "injunction",
+    "class action",
+    "personuppgiftsincident"
+  ],
+  "riskRules": [
+    {
+      "pattern": "unlimited liability",
+      "risk": "Unlimited liability: there is no cap on damages."
+    },
+    {
+      "pattern": "uncertain about gdpr|gdpr roles|uncertain about who is the controller",
+      "risk": "GDPR roles are uncertain: controller and processor are not clearly assigned."
+    },
+    {
+      "pattern": "without warranty|as is",
+      "risk": "Warranty is disclaimed; the allocation of risk is one-sided."
+    },
+    {
+      "pattern": "waive all claims|waives all claims",
+      "risk": "A broad waiver of claims may be unenforceable and needs a human lawyer."
+    }
+  ]
+}
