@@ -35,6 +35,21 @@ That runs `node --test`.
 | `GITGRAM_DB` | No | SQLite database path. Defaults to `db/gitgram.db`. |
 | `GITGRAM_DATA` | No | Directory for bare repositories. Defaults to `data/`. |
 
+## Demo wallet
+
+The demo wallet is simulated. Balances are **GGT (demo)** units stored in this app's SQLite database. They are not money. There is no deposit, withdrawal, payment integration, or exchange for anything of real-world value. The illustrative USD figure on the wallet page is a fixed display label from the design mockup. It is not a price and it is not convertible. Nothing in the wallet is a financial product.
+
+Each signed-in user receives a one-time grant of 1,000.00 GGT (demo) from the `gitgram-faucet` system account the first time their wallet is opened. Transfers move those demo units to another Gitgram user. Every transfer is two ledger entries that sum to zero, runs in one database transaction, and is stored with an idempotency key so the same submission is not applied twice. Amounts are integer cents (minor units). A user balance cannot go below zero. The faucet account is the issuance source, so its own balance is negative by the amount of demo units it has issued.
+
+| Route | Access | What it does |
+| --- | --- | --- |
+| `GET /wallet` | Signed in | Balance, 30-day incoming and outgoing totals, and history. `?flow=in` or `?flow=out` filters the list. |
+| `POST /wallet/transfer` | Signed in, CSRF | Sends demo units. Fields: `recipient` (a Gitgram username, with or without `@`), `amount` (for example `25.00`), `memo` (optional, 140 characters), and `idempotency_key`. |
+| `GET /api/wallet` | Signed in | The same wallet as JSON. Every response includes `"demo": true` and a demo disclaimer. |
+| `GET /wallet/export.csv` | Signed in | Downloads that user's simulated history. |
+
+Open `/wallet` while signed in, or use **Demo Wallet** in the navigation. The usernames `wallet` and `gitgram-faucet` are reserved so the page does not collide with a profile. Request and reset are visible and disabled; they are not implemented.
+
 ## License
 
 GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE).

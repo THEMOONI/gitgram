@@ -6,6 +6,7 @@ const compression = require('compression');
 const Database = require('better-sqlite3');
 const moment = require('moment');
 const { csrfProtection } = require('./lib/csrf');
+const { ensureLedgerSchema } = require('./lib/ledger');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
 let warnedAboutSessionSecret = false;
@@ -62,6 +63,7 @@ function createApp(options = {}) {
   fs.mkdirSync(path.join(dataDir, 'repos'), { recursive: true });
 
   const db = openDatabase(dbPath);
+  ensureLedgerSchema(db);
   const app = express();
   const port = process.env.PORT || 3000;
   const csrf = csrfProtection();
@@ -97,10 +99,13 @@ function createApp(options = {}) {
       : null;
     res.locals.moment = moment;
     res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + port;
+    res.locals.navWallet = false;
     next();
   });
 
   app.use('/', require('./routes/auth')(db));
+  // Wallet routes are registered before /:owner/:repo so /wallet is never a profile or repository.
+  app.use('/', require('./routes/wallet')(db));
   app.use('/', require('./routes/git')(db, { dataDir }));
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));
