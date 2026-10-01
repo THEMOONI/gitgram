@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": false,
+    "types": ["node"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["lib/tifi/**/*.ts", "routes/tifi.ts", "test/tifi.test.ts"]
+}

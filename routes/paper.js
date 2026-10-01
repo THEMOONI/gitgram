@@ -199,7 +199,11 @@ module.exports = function paperRoutes(db, options = {}) {
   }
 
   function loadOwn(req) {
-    return db.prepare('SELECT * FROM paper_portfolios WHERE owner_user_id = ? ORDER BY id DESC LIMIT 1').get(req.paperUser.id);
+    return db.prepare(`
+      SELECT * FROM paper_portfolios
+      WHERE owner_user_id = ? AND (agent_label IS NULL OR agent_label NOT LIKE 'tifi:%')
+      ORDER BY id DESC LIMIT 1
+    `).get(req.paperUser.id);
   }
 
   function takeFlash(req) {

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIFI · Uppsättning 3 · Dina tigrar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="tifi-components.css">
+<style>
+/* mockup wrapper only: the page itself */
+html,body{margin:0;background:#07080A}
+
+.pg-foot{text-align:center;color:var(--tifi-text-3);font-size:12.5px;margin:18px 0 0;padding:0 16px}
+.wrap{padding:40px 24px 48px;display:flex;justify-content:center;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(255,122,26,.10),transparent 70%)}
+.setup{width:100%;max-width:960px;background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius-xl);padding:32px 34px 26px;box-shadow:var(--tifi-shadow-card)}
+.setup.wide{max-width:1120px}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:22px}
+.sh h1{display:flex;align-items:center;gap:12px;margin:0;font-family:var(--tifi-font-display);font-size:30px;letter-spacing:-.6px}
+.sh h1 img{height:30px}
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.steps li{font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:var(--tifi-bg-2);color:var(--tifi-text-3);border:1px solid var(--tifi-line);white-space:nowrap}
+.steps li.done{color:var(--tifi-up);border-color:rgba(61,220,151,.3)}
+.steps li.done::before{content:"✓ "}
+.steps li.on{background:var(--tifi-orange);color:var(--tifi-on-orange);border-color:var(--tifi-orange);box-shadow:var(--tifi-glow-sm)}
+.note{display:flex;gap:12px;align-items:flex-start;background:var(--tifi-orange-soft);border:1px solid var(--tifi-orange-line);border-radius:var(--tifi-radius);padding:12px 14px;color:var(--tifi-text-1);font-size:13.5px;margin-bottom:24px}
+.note b{color:var(--tifi-orange-text)}
+.note svg{flex:none;margin-top:2px}
+.setup h2{font-family:var(--tifi-font-display);font-size:22px;margin:0 0 6px;letter-spacing:-.3px}
+.lead{color:var(--tifi-text-2);margin:0 0 18px;font-size:14.5px}
+.checks{display:grid;gap:10px}
+.act{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:22px}
+.act .hint{margin-right:auto}
+.pw{display:grid;gap:14px;max-width:none}
+.meter{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:2px}
+.meter i{height:4px;border-radius:2px;background:var(--tifi-bg-3)}
+.meter i.on{background:var(--tifi-orange)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.col{--acc:var(--tifi-orange);background:var(--tifi-bg-2);border:1px solid var(--tifi-line);border-top:2px solid var(--acc);border-radius:var(--tifi-radius-lg);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.col .pic{aspect-ratio:1;border-radius:var(--tifi-radius-lg);overflow:hidden;border:1px solid var(--tifi-line);position:relative;background:var(--tifi-bg-1)}
+.col .pic img{width:100%;height:100%;object-fit:cover;display:block}
+.col .pic .ph{position:absolute;inset:auto 10px 10px 10px;text-align:center;font-size:12px;color:var(--tifi-text-2);background:rgba(7,8,10,.75);border-radius:8px;padding:5px}
+.col .pic .gen{position:absolute;top:10px;left:10px;display:flex;gap:6px}
+.col .lbl{font-size:13px;font-weight:600}
+.res{border-top:1px solid var(--tifi-line);padding-top:12px;display:flex;flex-direction:column;gap:9px}
+.res .nm{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:9px 12px}
+.res .nm b{font-family:var(--tifi-font-display);font-size:18px}
+.res .nm small{font-size:11px;color:var(--tifi-text-3)}
+.res .tg{background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:8px 12px;font-size:13.5px;color:var(--tifi-text-2)}
+.res .meta{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tifi-text-3);flex-wrap:wrap}
+.res .meta .tifi-chip{background:var(--acc)}
+.res .rules{border-left:3px solid var(--acc);background:var(--tifi-bg-1);border-radius:0 8px 8px 0;padding:9px 12px;font-size:13px;color:var(--tifi-text-2);line-height:1.5}
+.res .rules b{display:block;font-family:var(--tifi-font-mono);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--tifi-text-3);margin-bottom:3px}
+.empty-res{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--tifi-text-3);font-size:12.5px;border:1px dashed var(--tifi-line-2);border-radius:var(--tifi-radius);padding:18px;min-height:120px}
+.done-badge{position:absolute;top:10px;right:10px;font-size:11px;font-weight:700;font-family:var(--tifi-font-mono);color:#062417;background:var(--tifi-up);border-radius:999px;padding:2px 9px}
+.spin{position:absolute;inset:0;display:grid;place-items:center;background:rgba(7,8,10,.55)}
+@media (max-width:900px){
+  .wrap{padding:16px 12px 32px}
+  .setup{padding:20px 16px 18px;border-radius:var(--tifi-radius-lg)}
+  .sh{flex-direction:column;align-items:flex-start;gap:12px}
+  .sh h1{font-size:24px}
+  .steps li{font-size:11.5px;padding:4px 9px}
+  .cols{grid-template-columns:1fr}
+  .act{flex-wrap:wrap}
+  .act .hint{flex-basis:100%}
+  .act .tifi-btn{flex:1}
+}
+
+</style>
+</head>
+<body>
+<div class="tifi" data-app="tifi">
+<div class="tifi-sim-banner" role="status" aria-live="polite">
+  <span class="tifi-sim-banner__stripes" aria-hidden="true"></span>
+  <span class="tifi-paper">Paper trading</span>
+  <span class="tifi-sim-banner__text"><b>SIMULERING</b> · Simulering – DEMO har inget värde</span>
+  <span class="tifi-sim-banner__meta">Simulerade pengar · inga riktiga order · inte finansiell rådgivning</span>
+</div>
+<div class="wrap"><main class="setup wide">
+<div class="sh"><h1><img src="brand/tifi-logo.svg" alt="TIFI">uppsättning</h1><ol class="steps" aria-label="Steg"><li class="done">Reglerna</li><li class="done">Lösenord</li><li class="on" aria-current="step">Dina tigrar</li><li class="">Start</li></ol></div>
+<div class="note" role="note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9A4D" stroke-width="2.2" stroke-linecap="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg><div><b>Pappershandel.</b> Tigrarna handlar med simulerade pengar mot riktiga marknadspriser. Simulering – DEMO har inget värde, och inga order skickas till en börs.</div></div>
+<h2>Designa dina tigrar</h2>
+<p class="lead">Tre AI-tigrar handlar på papper sida vid sida och tävlar mot varandra. Beskriv i en mening hur varje tiger ska handla. AI:n gör om det till en tagline, en strategi, regler och vilken coin den får handla, och sedan genererar du ett porträtt. Namnen är fasta: TIFI 1, TIFI 2 och TIFI 3.</p>
+<div class="cols"><section class="col" style="--acc:var(--tifi-t1)" aria-label="TIFI 1">
+<div class="pic"><img src="portraits/tifi-1.png" alt="Genererat porträtt av TIFI 1"><span class="done-badge">Porträtt klart</span></div>
+<label class="lbl" for="p1">Hur ska den här tigern handla?</label>
+<textarea class="tifi-textarea" id="p1" rows="3">en otålig tiger som bara köper BTC när priset bryter ut över dagens högsta</textarea>
+<button class="tifi-btn tifi-btn--secondary tifi-btn--block">Skapa igen</button>
+<div class="res"><div class="nm"><b>TIFI 1</b><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div>
+<div class="tg">den otåliga</div>
+<div class="meta"><span class="tifi-chip">BTC</span>kör på <b style="color:var(--tifi-text-1)">Utbrott</b></div>
+<div class="rules"><b>Regler</b>Handla bara BTC. Gå lång när priset stänger över dagens högsta med hög volym. Stop under utbrottsnivån. Max 3 trades per dag.</div>
+<button class="tifi-btn tifi-btn--secondary tifi-btn--block"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Generera porträtt igen</button></div>
+</section><section class="col" style="--acc:var(--tifi-t2)" aria-label="TIFI 2">
+<div class="pic"><img src="portraits/tifi-placeholder.png" alt="Platshållare: tigerhuvud i grafit, porträtt ej genererat"><span class="ph">Inget porträtt än</span></div>
+<label class="lbl" for="p2">Hur ska den här tigern handla?</label>
+<textarea class="tifi-textarea is-focus" id="p2" rows="3">en lugn tiger som följer ETH-trenden och hellre väntar än jagar</textarea>
+<button class="tifi-btn tifi-btn--secondary tifi-btn--block">Skapa igen</button>
+<div class="res"><div class="nm"><b>TIFI 2</b><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div>
+<div class="tg">den tålmodiga</div>
+<div class="meta"><span class="tifi-chip">ETH</span>kör på <b style="color:var(--tifi-text-1)">Trend</b></div>
+<div class="rules"><b>Regler</b>Handla bara ETH. Gå in först när 4-timmarstrenden är tydlig. Jaga aldrig en rusning. Stå utanför när trenden vänder.</div>
+<button class="tifi-btn tifi-btn--primary tifi-btn--block tifi-btn--lg"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Generera porträtt</button></div>
+</section><section class="col" style="--acc:var(--tifi-t3)" aria-label="TIFI 3">
+<div class="pic"><img src="portraits/tifi-placeholder.png" alt="Platshållare: tigerhuvud i grafit"><span class="ph">Väntar på beskrivning</span></div>
+<label class="lbl" for="p3">Hur ska den här tigern handla?</label>
+<textarea class="tifi-textarea" id="p3" rows="3" placeholder="t.ex. en snabb tiger som rider på momentum i SOL och kliver av när farten dör"></textarea>
+<button class="tifi-btn tifi-btn--primary tifi-btn--block tifi-btn--lg" disabled>Skapa</button>
+<div class="empty-res">Beskriv tigern i en mening och tryck på Skapa. Namnet blir TIFI 3.</div>
+</section></div>
+<div class="act"><span class="tifi-hint">Skapa alla tre tigrar och generera deras porträtt för att fortsätta.</span><button class="tifi-btn tifi-btn--secondary tifi-btn--lg">Tillbaka</button><button class="tifi-btn tifi-btn--primary tifi-btn--lg" disabled>Nästa</button></div>
+
+<p class="pg-foot">Inte finansiell rådgivning. Öppen källkod, MIT-licens, ingen garanti.</p>
+</main></div>
+</div>
+</body>
+</html>

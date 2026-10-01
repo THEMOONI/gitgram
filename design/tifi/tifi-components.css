@@ -1,0 +1,110 @@
+/* TIFI components v1.0. Requires tokens.css. Everything is scoped under .tifi / [data-app="tifi"].
+   Class prefix: .tifi-  (no global element selectors). */
+:is(.tifi,[data-app="tifi"]) { font-size: var(--tifi-fs-md); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+:is(.tifi,[data-app="tifi"]) *, :is(.tifi,[data-app="tifi"]) *::before, :is(.tifi,[data-app="tifi"]) *::after { box-sizing: border-box; }
+:is(.tifi,[data-app="tifi"]) :focus-visible { outline: none; box-shadow: var(--tifi-focus-ring); }
+.tifi .tifi-mono { font-family: var(--tifi-font-mono); font-variant-numeric: tabular-nums; }
+.tifi .tifi-up { color: var(--tifi-up); } .tifi .tifi-down { color: var(--tifi-down); } .tifi .tifi-flat { color: var(--tifi-flat); }
+.tifi .tifi-muted { color: var(--tifi-text-3); }
+.tifi .tifi-sim { font-family: var(--tifi-font-mono); font-size: .78em; color: var(--tifi-orange-text); font-weight: 500; }
+
+/* ---------- Simulation banner (mandatory, permanent, every TIFI screen) ---------- */
+.tifi .tifi-sim-banner { display: flex; align-items: center; gap: var(--tifi-space-3); min-height: 36px; padding: 0 var(--tifi-space-4) 0 0;
+  background: var(--tifi-bg-1); border-bottom: 1px solid var(--tifi-orange-line); position: sticky; top: 0; z-index: 50; }
+.tifi .tifi-sim-banner__stripes { align-self: stretch; width: 44px; flex: none; background: var(--tifi-stripes); }
+.tifi .tifi-sim-banner__text { font-weight: 600; font-size: 13px; color: var(--tifi-text-1); }
+.tifi .tifi-sim-banner__text b { color: var(--tifi-orange-text); font-family: var(--tifi-font-mono); letter-spacing: .5px; }
+.tifi .tifi-sim-banner__meta { margin-left: auto; font-size: var(--tifi-fs-sm); color: var(--tifi-text-3); }
+
+/* PAPER TRADING / DEMO label */
+.tifi .tifi-paper { display: inline-flex; align-items: center; gap: 6px; font-family: var(--tifi-font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: .8px; text-transform: uppercase; color: var(--tifi-on-orange); background: var(--tifi-orange); border-radius: var(--tifi-radius-sm);
+  padding: 3px 8px; box-shadow: var(--tifi-glow-sm); white-space: nowrap; }
+.tifi .tifi-paper--outline { color: var(--tifi-orange-text); background: transparent; border: 1px solid var(--tifi-orange-line); box-shadow: none; }
+
+/* ---------- AI badges ---------- */
+.tifi .tifi-badge-ai { display: inline-flex; align-items: center; gap: 5px; font-family: var(--tifi-font-mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: .3px; color: #C9C1FF; background: var(--tifi-ai-soft); border: 1px solid var(--tifi-ai-line); border-radius: var(--tifi-radius-pill);
+  padding: 1px 8px 1px 6px; white-space: nowrap; line-height: 1.6; }
+.tifi .tifi-badge-ai svg { width: 11px; height: 11px; flex: none; }
+
+/* ---------- Buttons ---------- */
+.tifi .tifi-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: var(--tifi-radius);
+  font: 600 14px var(--tifi-font-ui); border: 1px solid transparent; cursor: pointer; white-space: nowrap; text-decoration: none; transition: background .15s, box-shadow .15s, border-color .15s; }
+.tifi .tifi-btn--primary { background: var(--tifi-orange); color: var(--tifi-on-orange); box-shadow: 0 0 18px rgba(255,122,26,.25); }
+.tifi .tifi-btn--primary:hover, .tifi .tifi-btn--primary.is-hover { background: var(--tifi-orange-hover); box-shadow: var(--tifi-glow-md); }
+.tifi .tifi-btn--primary:active { background: var(--tifi-orange-press); }
+.tifi .tifi-btn--secondary { background: var(--tifi-bg-2); color: var(--tifi-text-1); border-color: var(--tifi-line-2); }
+.tifi .tifi-btn--secondary:hover, .tifi .tifi-btn--secondary.is-hover { background: var(--tifi-bg-3); }
+.tifi .tifi-btn--ghost { background: transparent; color: var(--tifi-text-2); }
+.tifi .tifi-btn--ghost:hover { color: var(--tifi-text-1); background: var(--tifi-bg-3); }
+.tifi .tifi-btn--choice { background: var(--tifi-bg-3); color: var(--tifi-text-1); border-color: var(--tifi-line-2); min-width: 140px; } /* equal-weight consent buttons */
+.tifi .tifi-btn--choice:hover { border-color: var(--tifi-text-3); }
+.tifi .tifi-btn--lg { height: 48px; padding: 0 22px; font-size: 15px; }
+.tifi .tifi-btn--block { width: 100%; }
+.tifi .tifi-btn:disabled, .tifi .tifi-btn[aria-disabled="true"] { background: var(--tifi-bg-3); color: var(--tifi-text-3); border-color: var(--tifi-line); box-shadow: none; cursor: not-allowed; }
+.tifi .tifi-btn:focus-visible, .tifi .tifi-btn.is-focus { box-shadow: var(--tifi-focus-ring); }
+
+/* ---------- Inputs ---------- */
+.tifi .tifi-field { display: flex; flex-direction: column; gap: 6px; }
+.tifi .tifi-label { font-size: 13px; font-weight: 600; color: var(--tifi-text-1); }
+.tifi .tifi-input, .tifi .tifi-textarea { width: 100%; background: var(--tifi-bg-1); color: var(--tifi-text-1); border: 1px solid var(--tifi-line-2);
+  border-radius: var(--tifi-radius); padding: 11px 14px; font: 500 14.5px var(--tifi-font-ui); outline: none; transition: border-color .15s, box-shadow .15s; }
+.tifi .tifi-textarea { resize: vertical; min-height: 76px; line-height: 1.45; }
+.tifi .tifi-input::placeholder, .tifi .tifi-textarea::placeholder { color: var(--tifi-text-3); }
+.tifi .tifi-input:hover, .tifi .tifi-textarea:hover { border-color: var(--tifi-text-3); }
+.tifi .tifi-input:focus-visible, .tifi .tifi-textarea:focus-visible, .tifi .is-focus.tifi-input, .tifi .is-focus.tifi-textarea {
+  border-color: var(--tifi-orange); box-shadow: 0 0 0 3px rgba(255,122,26,.22); }
+.tifi .tifi-input[aria-invalid="true"], .tifi .tifi-textarea[aria-invalid="true"] { border-color: var(--tifi-down); box-shadow: 0 0 0 3px rgba(255,93,122,.16); }
+.tifi .tifi-hint { font-size: var(--tifi-fs-sm); color: var(--tifi-text-3); }
+.tifi .tifi-hint--error { color: var(--tifi-down); } .tifi .tifi-hint--ok { color: var(--tifi-up); }
+
+/* Checkbox row */
+.tifi .tifi-check { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; background: var(--tifi-bg-2); border: 1px solid var(--tifi-line);
+  border-radius: var(--tifi-radius); cursor: pointer; color: var(--tifi-text-2); }
+.tifi .tifi-check b { color: var(--tifi-text-1); }
+.tifi .tifi-check input { appearance: none; flex: none; width: 20px; height: 20px; margin-top: 2px; border-radius: 5px; border: 1.5px solid var(--tifi-text-3); background: var(--tifi-bg-1); display: grid; place-items: center; cursor: pointer; }
+.tifi .tifi-check input:checked { background: var(--tifi-orange); border-color: var(--tifi-orange); }
+.tifi .tifi-check input:checked::after { content: ""; width: 10px; height: 6px; border: solid var(--tifi-on-orange); border-width: 0 0 2.5px 2.5px; transform: translate(0,-1px) rotate(-45deg); }
+.tifi .tifi-check input:focus-visible, .tifi .tifi-check.is-focus input { box-shadow: var(--tifi-focus-ring); }
+.tifi .tifi-check:has(input:checked) { border-color: var(--tifi-orange-line); background: linear-gradient(90deg, var(--tifi-orange-soft), transparent 60%), var(--tifi-bg-2); }
+
+/* Toggle (switch) */
+.tifi .tifi-toggle { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.tifi .tifi-toggle input { appearance: none; flex: none; width: 42px; height: 24px; border-radius: 999px; background: var(--tifi-bg-3); border: 1px solid var(--tifi-line-2); position: relative; cursor: pointer; transition: background .15s; }
+.tifi .tifi-toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--tifi-text-2); transition: transform .15s; }
+.tifi .tifi-toggle input:checked { background: var(--tifi-orange); border-color: var(--tifi-orange); }
+.tifi .tifi-toggle input:checked::after { transform: translateX(18px); background: var(--tifi-on-orange); }
+.tifi .tifi-toggle input:focus-visible, .tifi .tifi-toggle.is-focus input { box-shadow: var(--tifi-focus-ring); }
+
+/* ---------- Cards, chips, bars ---------- */
+.tifi .tifi-card { background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius-lg); }
+.tifi .tifi-card__title { font-family: var(--tifi-font-mono); font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: var(--tifi-text-3); font-weight: 600; }
+.tifi .tifi-chip { display: inline-flex; align-items: center; font-family: var(--tifi-font-mono); font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: var(--tifi-radius-pill); color: var(--tifi-on-orange); background: var(--tifi-orange); }
+.tifi .tifi-bar { height: 6px; border-radius: 999px; background: var(--tifi-bg-3); overflow: hidden; }
+.tifi .tifi-bar > i { display: block; height: 100%; border-radius: inherit; background: var(--tifi-orange); }
+.tifi .tifi-portrait { border-radius: 50%; object-fit: cover; border: 2px solid var(--tifi-orange); box-shadow: var(--tifi-glow-sm); background: var(--tifi-bg-2); }
+
+/* ---------- Voice notice (shown BEFORE any voice call starts) ---------- */
+.tifi .tifi-voice { display: grid; grid-template-columns: auto 1fr; gap: 14px; padding: 18px; background: var(--tifi-bg-2); border: 1px solid var(--tifi-ai-line); border-radius: var(--tifi-radius-lg); max-width: 460px; }
+.tifi .tifi-voice__icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--tifi-ai-soft); color: var(--tifi-ai); }
+.tifi .tifi-voice__title { font-family: var(--tifi-font-display); font-size: 18px; font-weight: 600; margin: 0 0 4px; color: var(--tifi-text-1); }
+.tifi .tifi-voice p { margin: 0; color: var(--tifi-text-2); font-size: 13.5px; }
+.tifi .tifi-voice__actions { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- Consent dialog (no dark patterns: equal buttons, voice off by default) ---------- */
+.tifi .tifi-consent { width: 100%; max-width: 480px; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line-2); border-radius: var(--tifi-radius-lg); padding: 22px; box-shadow: var(--tifi-shadow-card); }
+.tifi .tifi-consent h2 { font-family: var(--tifi-font-display); font-size: 20px; font-weight: 700; margin: 0 0 6px; text-transform: none; letter-spacing: -.3px; color: var(--tifi-text-1); display: block; }
+.tifi .tifi-consent p { margin: 0 0 14px; color: var(--tifi-text-2); font-size: 13.5px; }
+.tifi .tifi-consent__opts { border-top: 1px solid var(--tifi-line); border-bottom: 1px solid var(--tifi-line); padding: 12px 0; margin-bottom: 16px; display: grid; gap: 12px; }
+.tifi .tifi-consent__opts small { display: block; color: var(--tifi-text-3); font-size: 12.5px; font-weight: 400; }
+.tifi .tifi-consent__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Banner on narrow screens: stripes left, label + text stacked */
+@media (max-width: 600px) {
+  .tifi .tifi-sim-banner { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; row-gap: 3px; padding: 6px 12px 6px 0; align-items: center; }
+  .tifi .tifi-sim-banner__stripes { grid-row: 1 / span 2; width: 22px; }
+  .tifi .tifi-sim-banner .tifi-paper { justify-self: start; }
+  .tifi .tifi-sim-banner__text { font-size: 12.5px; }
+  .tifi .tifi-sim-banner__meta { display: none; }
+}

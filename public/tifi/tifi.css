@@ -1,0 +1,187 @@
+/* TIFI page layout. Tokens and components stay in tokens.css and tifi-components.css.
+   Loaded only from TIFI views. Selectors stay under .tifi except the page shell
+   that clears Gitgram's purple wash on these screens. */
+
+body:has(.tifi) { background: #07080A; }
+body:has(.tifi)::before { display: none; }
+body:has(.tifi) .main-content { padding: 0; width: 100%; }
+
+.tifi .pg-foot { text-align: center; color: var(--tifi-text-3); font-size: 12.5px; margin: 18px 0 28px; padding: 0 16px; }
+.tifi .dash { padding: 16px 24px 0; max-width: 1600px; margin: 0 auto; }
+.tifi .top { display: flex; align-items: stretch; gap: 12px; margin-bottom: 16px; }
+.tifi .brand { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 250px; }
+.tifi .brand-row { display: flex; align-items: center; gap: 10px; }
+.tifi .brand img.logo { height: 30px; display: block; }
+.tifi .brand-sub { font-size: 12px; color: var(--tifi-text-3); }
+.tifi .stats { display: flex; gap: 10px; flex: 1; }
+.tifi .stat { flex: 1; min-width: 0; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 9px 12px; }
+.tifi .stat .k { font-family: var(--tifi-font-mono); font-size: 10.5px; letter-spacing: .7px; text-transform: uppercase; color: var(--tifi-text-3); font-weight: 600; }
+.tifi .stat .v { font-family: var(--tifi-font-mono); font-size: 21px; font-weight: 700; letter-spacing: -.5px; line-height: 1.25; white-space: nowrap; }
+.tifi .stat .v small { font-size: 11px; font-weight: 600; color: var(--tifi-text-3); letter-spacing: 0; margin-left: 3px; }
+.tifi .stat .s { font-size: 11.5px; color: var(--tifi-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tifi .status { min-width: 230px; display: flex; flex-direction: column; justify-content: center; gap: 8px; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 9px 14px; }
+.tifi .status .r1 { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--tifi-text-2); }
+.tifi .status .r1 i { width: 8px; height: 8px; border-radius: 50%; background: var(--tifi-text-3); flex: none; }
+.tifi .status .r1 b { display: block; font-family: var(--tifi-font-mono); font-size: 10.5px; letter-spacing: .7px; color: var(--tifi-text-3); text-transform: uppercase; }
+.tifi .status .r2 { display: flex; gap: 8px; align-items: center; font-family: var(--tifi-font-mono); font-size: 12px; color: var(--tifi-text-2); }
+.tifi .status .r2 i { width: 8px; height: 8px; border-radius: 50%; background: var(--tifi-up); box-shadow: 0 0 0 3px var(--tifi-up-soft); }
+.tifi .status .r2 i.off { background: var(--tifi-text-3); box-shadow: none; }
+.tifi .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 372px; gap: 14px; align-items: stretch; }
+.tifi .tcard { --acc: var(--tifi-orange); background: linear-gradient(180deg, color-mix(in srgb, var(--acc) 7%, transparent), transparent 220px), var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-top: 2px solid var(--acc); border-radius: var(--tifi-radius-lg); padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tifi .tcard.lead { box-shadow: 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent), 0 0 34px -6px color-mix(in srgb, var(--acc) 40%, transparent); }
+.tifi .th { display: flex; gap: 11px; align-items: center; }
+.tifi .th img { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 2px solid var(--acc); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--acc) 60%, transparent); flex: none; }
+.tifi .th .nm { font-family: var(--tifi-font-display); font-size: 19px; font-weight: 700; line-height: 1.1; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.tifi .th .tg { font-size: 12.5px; color: var(--tifi-text-2); margin-top: 2px; }
+.tifi .th .rk { margin-left: auto; text-align: right; flex: none; }
+.tifi .th .rk b { font-family: var(--tifi-font-display); font-size: 22px; display: block; line-height: 1; }
+.tifi .th .rk small { font-size: 11px; color: var(--tifi-text-3); white-space: nowrap; }
+.tifi .strat { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--tifi-text-3); }
+.tifi .strat .tifi-chip { background: var(--acc); }
+.tifi .strat span.k { font-family: var(--tifi-font-mono); font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; }
+.tifi .strat b { color: var(--tifi-text-1); font-weight: 600; }
+.tifi .bal { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tifi .bal .big { font-family: var(--tifi-font-mono); font-size: 30px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+.tifi .bal .cur { font-family: var(--tifi-font-mono); font-size: 13px; color: var(--tifi-text-3); font-weight: 600; }
+.tifi .bal .ch { font-family: var(--tifi-font-mono); font-size: 12.5px; font-weight: 600; }
+.tifi .pos { background: var(--tifi-bg-2); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 10px 12px; }
+.tifi .pos .r { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tifi .pos .side { font-family: var(--tifi-font-mono); font-size: 15px; font-weight: 700; }
+.tifi .pos .side small { font-size: 11px; margin-right: 4px; }
+.tifi .pos .val { font-family: var(--tifi-font-mono); font-weight: 700; font-size: 14px; }
+.tifi .pos .u { font-size: 12px; color: var(--tifi-text-2); margin-top: 3px; }
+.tifi .pos .ems { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.tifi .pos .ems div { background: var(--tifi-bg-1); border-radius: 6px; padding: 4px 7px; }
+.tifi .pos .ems span { display: block; font-size: 10px; font-family: var(--tifi-font-mono); text-transform: uppercase; letter-spacing: .5px; color: var(--tifi-text-3); }
+.tifi .pos .ems b { font-family: var(--tifi-font-mono); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.tifi .pos.flat .side { color: var(--tifi-text-2); }
+.tifi .chart { position: relative; flex: 1; display: flex; flex-direction: column; }
+.tifi .chart svg { display: block; width: 100%; height: auto; flex: 1; min-height: 150px; }
+.tifi .chart .yl { position: absolute; right: 2px; font-family: var(--tifi-font-mono); font-size: 10px; color: var(--tifi-text-3); background: color-mix(in srgb, var(--tifi-bg-1) 70%, transparent); padding: 0 3px; border-radius: 3px; }
+.tifi .chart .ax { display: flex; justify-content: space-between; font-family: var(--tifi-font-mono); font-size: 10.5px; color: var(--tifi-text-3); margin-top: 2px; }
+.tifi .dec .dh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.tifi .dec .row { display: grid; grid-template-columns: 92px 1fr 38px; gap: 8px; align-items: center; font-family: var(--tifi-font-mono); font-size: 11.5px; margin-bottom: 5px; }
+.tifi .dec .row b { font-weight: 700; white-space: nowrap; }
+.tifi .dec .row .tifi-bar > i { background: var(--acc); }
+.tifi .dec .row.dim { color: var(--tifi-text-3); }
+.tifi .dec .row.dim .tifi-bar > i { background: var(--tifi-line-2); }
+.tifi .dec .row span:last-child { text-align: right; }
+.tifi .dec .why { font-size: 12px; color: var(--tifi-text-2); margin-top: 4px; }
+.tifi .bud { display: grid; grid-template-columns: 1fr; gap: 9px; }
+.tifi .bud .l { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--tifi-text-3); margin-bottom: 5px; }
+.tifi .bud .l b { font-family: var(--tifi-font-mono); color: var(--tifi-text-2); font-weight: 500; }
+.tifi .bud .tifi-bar > i { background: var(--acc); }
+.tifi .tf { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; border-top: 1px solid var(--tifi-line); padding-top: 10px; }
+.tifi .tf span { display: block; font-family: var(--tifi-font-mono); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--tifi-text-3); }
+.tifi .tf b { font-family: var(--tifi-font-mono); font-size: 12.5px; font-weight: 600; }
+.tifi .side-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.tifi .panel { background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius-lg); padding: 13px 14px; }
+.tifi .panel .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tifi .panel .ph small { font-family: var(--tifi-font-mono); font-size: 11px; color: var(--tifi-text-3); }
+.tifi .lb { display: grid; grid-template-columns: 14px 26px 54px 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+.tifi .lb:last-child { margin-bottom: 0; }
+.tifi .lb .n { font-family: var(--tifi-font-mono); color: var(--tifi-text-3); }
+.tifi .lb img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--acc); }
+.tifi .lb .tifi-bar { height: 7px; }
+.tifi .lb .tifi-bar > i { background: var(--acc); }
+.tifi .lb .eq { font-family: var(--tifi-font-mono); font-weight: 700; font-size: 12.5px; white-space: nowrap; }
+.tifi .feed { display: flex; flex-direction: column; gap: 6px; max-height: 384px; overflow: hidden; -webkit-mask-image: linear-gradient(#000 82%, transparent); mask-image: linear-gradient(#000 82%, transparent); }
+.tifi .fe { --acc: var(--tifi-orange); background: var(--tifi-bg-2); border-left: 3px solid var(--acc); border-radius: 7px; padding: 7px 9px; }
+.tifi .fe .r { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.tifi .fe .r i { width: 7px; height: 7px; border-radius: 50%; background: var(--acc); flex: none; }
+.tifi .fe .r .who { font-weight: 600; }
+.tifi .fe .r .act { font-family: var(--tifi-font-mono); font-weight: 700; font-size: 12px; }
+.tifi .fe .r .m { margin-left: auto; font-family: var(--tifi-font-mono); font-size: 11.5px; white-space: nowrap; }
+.tifi .fe .note { font-size: 11.5px; color: var(--tifi-text-2); margin-top: 3px; }
+.tifi .pool .tot { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.tifi .pool .tot b { font-family: var(--tifi-font-mono); font-size: 24px; font-weight: 700; letter-spacing: -.5px; }
+.tifi .pool .tot span { font-family: var(--tifi-font-mono); font-size: 12px; color: var(--tifi-text-3); }
+.tifi .stack { display: flex; height: 12px; border-radius: 999px; overflow: hidden; gap: 2px; margin-bottom: 12px; }
+.tifi .stack i { display: block; height: 100%; }
+.tifi .alloc { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 12px; font-size: 12px; align-items: center; }
+.tifi .alloc .hd { font-family: var(--tifi-font-mono); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: var(--tifi-text-3); }
+.tifi .alloc .nm { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+.tifi .alloc .nm i { width: 9px; height: 9px; border-radius: 3px; background: var(--acc); }
+.tifi .alloc .num { font-family: var(--tifi-font-mono); text-align: right; white-space: nowrap; }
+.tifi .pool .fn { font-size: 11.5px; color: var(--tifi-text-3); margin-top: 10px; border-top: 1px solid var(--tifi-line); padding-top: 8px; }
+.tifi .sim-flag { display: inline-block; margin-right: 6px; padding: 1px 7px; border: 1px solid var(--tifi-line-2); border-radius: 999px; font-family: var(--tifi-font-mono); font-size: 11px; letter-spacing: .08em; text-transform: lowercase; color: var(--tifi-text-1); background: var(--tifi-bg-2); }
+.tifi .world { margin-top: 14px; }
+.tifi .world .fn { font-size: 12px; color: var(--tifi-text-3); margin: 0 0 10px; }
+.tifi .world .wm, .tifi .world .wt { background: var(--tifi-bg-2); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 10px 12px; margin-bottom: 8px; }
+.tifi .world .r { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.tifi .world .outs { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 6px; font-family: var(--tifi-font-mono); font-size: 12px; }
+.tifi .world form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 8px; }
+.tifi .world form .tifi-field { margin: 0; min-width: 180px; flex: 1; }
+
+.tifi .wrap { padding: 40px 24px 48px; display: flex; justify-content: center; background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(255,122,26,.10), transparent 70%); }
+.tifi .setup { width: 100%; max-width: 960px; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius-xl); padding: 32px 34px 26px; box-shadow: var(--tifi-shadow-card); }
+.tifi .setup.wide { max-width: 1120px; }
+.tifi .sh { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
+.tifi .sh h1 { display: flex; align-items: center; gap: 12px; margin: 0; font-family: var(--tifi-font-display); font-size: 30px; letter-spacing: -.6px; font-weight: 700; }
+.tifi .sh h1 img { height: 30px; }
+.tifi .steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.tifi .steps li { font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--tifi-bg-2); color: var(--tifi-text-3); border: 1px solid var(--tifi-line); white-space: nowrap; }
+.tifi .steps li.done { color: var(--tifi-up); border-color: rgba(61,220,151,.3); }
+.tifi .steps li.done::before { content: "✓ "; }
+.tifi .steps li.on { background: var(--tifi-orange); color: var(--tifi-on-orange); border-color: var(--tifi-orange); box-shadow: var(--tifi-glow-sm); }
+.tifi .note { display: flex; gap: 12px; align-items: flex-start; background: var(--tifi-orange-soft); border: 1px solid var(--tifi-orange-line); border-radius: var(--tifi-radius); padding: 12px 14px; color: var(--tifi-text-1); font-size: 13.5px; margin-bottom: 24px; }
+.tifi .note b { color: var(--tifi-orange-text); }
+.tifi .note svg { flex: none; margin-top: 2px; }
+.tifi .setup h2 { font-family: var(--tifi-font-display); font-size: 22px; margin: 0 0 6px; letter-spacing: -.3px; font-weight: 700; }
+.tifi .lead { color: var(--tifi-text-2); margin: 0 0 18px; font-size: 14.5px; }
+.tifi .checks { display: grid; gap: 10px; }
+.tifi .act { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 22px; }
+.tifi .act .hint { margin-right: auto; }
+.tifi .pw { display: grid; gap: 14px; }
+.tifi .meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 2px; }
+.tifi .meter i { height: 4px; border-radius: 2px; background: var(--tifi-bg-3); }
+.tifi .meter i.on { background: var(--tifi-orange); }
+.tifi .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.tifi .col { --acc: var(--tifi-orange); background: var(--tifi-bg-2); border: 1px solid var(--tifi-line); border-top: 2px solid var(--acc); border-radius: var(--tifi-radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.tifi .col .pic { aspect-ratio: 1; border-radius: var(--tifi-radius-lg); overflow: hidden; border: 1px solid var(--tifi-line); position: relative; background: var(--tifi-bg-1); }
+.tifi .col .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tifi .col .pic .ph { position: absolute; inset: auto 10px 10px 10px; text-align: center; font-size: 12px; color: var(--tifi-text-2); background: rgba(7,8,10,.75); border-radius: 8px; padding: 5px; }
+.tifi .col .lbl { font-size: 13px; font-weight: 600; }
+.tifi .res { border-top: 1px solid var(--tifi-line); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.tifi .res .nm { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 9px 12px; }
+.tifi .res .nm b { font-family: var(--tifi-font-display); font-size: 18px; }
+.tifi .res .tg { background: var(--tifi-bg-1); border: 1px solid var(--tifi-line); border-radius: var(--tifi-radius); padding: 8px 12px; font-size: 13.5px; color: var(--tifi-text-2); }
+.tifi .res .meta { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--tifi-text-3); flex-wrap: wrap; }
+.tifi .res .meta .tifi-chip { background: var(--acc); }
+.tifi .res .rules { border-left: 3px solid var(--acc); background: var(--tifi-bg-1); border-radius: 0 8px 8px 0; padding: 9px 12px; font-size: 13px; color: var(--tifi-text-2); line-height: 1.5; }
+.tifi .res .rules b { display: block; font-family: var(--tifi-font-mono); font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--tifi-text-3); margin-bottom: 3px; }
+.tifi .empty-res { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--tifi-text-3); font-size: 12.5px; border: 1px dashed var(--tifi-line-2); border-radius: var(--tifi-radius); padding: 18px; min-height: 120px; }
+.tifi .done-badge { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; font-family: var(--tifi-font-mono); color: #062417; background: var(--tifi-up); border-radius: 999px; padding: 2px 9px; }
+
+.tifi .tifi-alert { margin: 0 0 14px; padding: 10px 12px; border-radius: var(--tifi-radius); font-size: 13.5px; }
+.tifi .tifi-alert.err { background: var(--tifi-down-soft); color: var(--tifi-down); }
+.tifi .tifi-alert.ok { background: var(--tifi-up-soft); color: var(--tifi-up); }
+.tifi .owner { margin-top: 14px; }
+.tifi .owner form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 8px; }
+.tifi .owner .tifi-field { min-width: 140px; }
+.tifi .owner h2 { margin: 0; }
+.tifi .consent-dock { max-width: 520px; margin: 0 auto 36px; }
+.tifi dialog.tifi-consent { border: 1px solid var(--tifi-line-2); background: var(--tifi-bg-1); color: var(--tifi-text-1); }
+.tifi dialog.tifi-consent::backdrop { background: rgba(7, 8, 10, .72); }
+.tifi .sheet-link { color: var(--tifi-orange-text); }
+
+@media (max-width: 900px) {
+  .tifi .dash { padding: 12px 14px 0; }
+  .tifi .top { flex-direction: column; gap: 10px; }
+  .tifi .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tifi .stat:first-child { grid-column: 1 / -1; }
+  .tifi .stat .v { font-size: 18px; }
+  .tifi .status { min-width: 0; flex-direction: row; justify-content: space-between; flex-wrap: wrap; }
+  .tifi .grid { grid-template-columns: 1fr; gap: 12px; }
+  .tifi .chart svg { height: 130px; min-height: 0; flex: none; }
+  .tifi .tcard .chart { flex: none; }
+  .tifi .wrap { padding: 16px 12px 32px; }
+  .tifi .setup { padding: 20px 16px 18px; border-radius: var(--tifi-radius-lg); }
+  .tifi .sh { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .tifi .sh h1 { font-size: 24px; }
+  .tifi .steps li { font-size: 11.5px; padding: 4px 9px; }
+  .tifi .cols { grid-template-columns: 1fr; }
+  .tifi .act { flex-wrap: wrap; }
+  .tifi .act .hint { flex-basis: 100%; }
+  .tifi .act .tifi-btn { flex: 1; }
+}

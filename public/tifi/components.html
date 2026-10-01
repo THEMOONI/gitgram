@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIFI · Komponenter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="tifi-components.css">
+<style>
+/* mockup wrapper only: the page itself */
+html,body{margin:0;background:#07080A}
+
+.pg-foot{text-align:center;color:var(--tifi-text-3);font-size:12.5px;margin:28px 0 28px}
+.sheet{max-width:1320px;margin:0 auto;padding:28px 32px 0}
+.sheet > header{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.sheet > header img{height:30px}
+.sheet h1{font-family:var(--tifi-font-display);font-size:30px;margin:0;letter-spacing:-.6px}
+.sub{color:var(--tifi-text-2);margin:0 0 24px}
+.g{display:grid;gap:18px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.blk{background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius-lg);padding:18px 20px}
+.blk h2{font-family:var(--tifi-font-mono);font-size:11.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tifi-text-3);margin:0 0 14px;font-weight:600;display:flex;justify-content:space-between;gap:10px}
+.blk h2 code{font-size:11px;color:var(--tifi-orange-text);text-transform:none;letter-spacing:0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cap{font-family:var(--tifi-font-mono);font-size:10.5px;color:var(--tifi-text-3);display:block;margin-top:6px}
+.spec{font-size:12.5px;color:var(--tifi-text-2);margin:12px 0 0;padding-left:18px}
+.spec li{margin-bottom:3px}
+.banner-demo{border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);overflow:hidden}
+.banner-demo .tifi-sim-banner{position:relative}
+.team{display:grid;gap:8px}
+.tm{display:flex;align-items:center;gap:12px;background:var(--tifi-bg-2);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:10px 12px}
+.tm .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#0B0B0C;flex:none}
+.tm b{display:block;font-size:14px}
+.tm small{color:var(--tifi-text-3);font-size:12px}
+.tm .tifi-badge-ai{margin-left:auto}
+.tm img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1.5px solid var(--tifi-orange)}
+.sw{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.sw div{border-radius:10px;border:1px solid var(--tifi-line);overflow:hidden;background:var(--tifi-bg-2)}
+.sw i{display:block;height:46px}
+.sw span{display:block;padding:6px 8px;font-family:var(--tifi-font-mono);font-size:10.5px;color:var(--tifi-text-2);line-height:1.4}
+.sw span b{display:block;color:var(--tifi-text-1);font-size:11px}
+.states .tifi-field{margin-bottom:12px}
+.voice-stage{display:flex;flex-direction:column;gap:10px}
+.cons-stage{display:flex;justify-content:center;padding:20px;border-radius:var(--tifi-radius);background:repeating-linear-gradient(45deg,#0B0C0F 0 12px,#0E0F12 12px 24px)}
+.lock{font-family:var(--tifi-font-mono);font-size:11px;color:var(--tifi-text-3);border:1px solid var(--tifi-line-2);border-radius:999px;padding:2px 8px;white-space:nowrap}
+
+</style>
+</head>
+<body>
+<div class="tifi" data-app="tifi">
+<div class="tifi-sim-banner" role="status" aria-live="polite">
+  <span class="tifi-sim-banner__stripes" aria-hidden="true"></span>
+  <span class="tifi-paper">Paper trading</span>
+  <span class="tifi-sim-banner__text"><b>SIMULERING</b> · Simulering – DEMO har inget värde</span>
+  <span class="tifi-sim-banner__meta">Simulerade pengar · inga riktiga order · inte finansiell rådgivning</span>
+</div>
+<main class="sheet">
+<header><img src="brand/tifi-logo.svg" alt="TIFI"><h1>Komponenter</h1><span class="tifi-paper">Paper trading · Demo</span></header>
+<p class="sub">Komponentark för TIFI (Tiger Finance) i Gitgram. Allt är scopat under <code class="tifi-mono">.tifi</code> / <code class="tifi-mono">[data-app="tifi"]</code>. Kontrastvärden anges mot <code class="tifi-mono">--tifi-bg-2</code>.</p>
+
+<div class="g">
+<section class="blk"><h2>Simuleringsbanner (obligatorisk på varje TIFI-vy) <code>.tifi-sim-banner</code></h2>
+<div class="banner-demo"><div class="tifi-sim-banner" role="status" aria-live="polite">
+  <span class="tifi-sim-banner__stripes" aria-hidden="true"></span>
+  <span class="tifi-paper">Paper trading</span>
+  <span class="tifi-sim-banner__text"><b>SIMULERING</b> · Simulering – DEMO har inget värde</span>
+  <span class="tifi-sim-banner__meta">Simulerade pengar · inga riktiga order · inte finansiell rådgivning</span>
+</div></div>
+<div class="row" style="margin-top:14px"><span class="tifi-paper">Paper trading</span><span class="tifi-paper">Paper trading · Demo</span><span class="tifi-paper tifi-paper--outline">Sim</span><span class="cap">.tifi-paper · .tifi-paper--outline</span></div>
+<ul class="spec"><li>Visas alltid överst, är sticky och går inte att stänga. Texten är exakt: <b>Simulering – DEMO har inget värde</b>.</li><li>Etiketten PAPER TRADING står alltid bredvid. Belopp visas med enheten DEMO och märks (sim).</li></ul></section>
+
+<div class="g g3">
+<section class="blk"><h2>AI-badge <code>.tifi-badge-ai</code></h2>
+<div class="row"><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span></div>
+<span class="cap">TIFI-kort: "AI-tiger" · Gitgram /team: "AI-agent"</span>
+<ul class="spec"><li>Visas bredvid namnet på varje tiger och varje AI-agent. Får aldrig döljas.</li><li>title/aria: "Den här tigern är en AI-agent".</li></ul></section>
+
+<section class="blk" style="grid-column:span 2"><h2>/team-rad med AI-agent-badge</h2>
+<div class="team">
+<div class="tm"><span class="av" style="background:#C8F53B">M</span><div><b>Milad Hemmati</b><small>Ägare · människa</small></div></div>
+<div class="tm"><span class="av" style="background:#9A8CFF">D</span><div><b>Gitgram-design</b><small>Design och UI</small></div><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span></div>
+<div class="tm"><img src="portraits/tifi-1-256.png" alt="Porträtt av TIFI 1"><div><b>TIFI 1</b><small>Pappershandel · Utbrott</small></div><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div>
+</div></section>
+</div>
+
+<div class="g g2">
+<section class="blk"><h2>Röstnotis (visas innan ett röstsamtal startar) <code>.tifi-voice</code></h2>
+<div class="voice-stage">
+<div class="tifi-voice" role="dialog" aria-labelledby="vt" aria-describedby="vd">
+<div class="tifi-voice__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+<div><h3 class="tifi-voice__title" id="vt">Du pratar med en AI-agent</h3><p id="vd">Rösten du hör är <b style="color:var(--tifi-text-1)">TIFI 1</b>, en AI-tiger och inte en människa. Den ger inga råd om riktiga pengar. Samtalet spelas bara in om du har slagit på röstinspelning.</p>
+<div class="row" style="margin-top:8px"><span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span><span class="lock">Röstinspelning: av</span></div></div>
+<div class="tifi-voice__actions"><button class="tifi-btn tifi-btn--primary">Starta samtal</button><button class="tifi-btn tifi-btn--secondary">Avbryt</button><button class="tifi-btn tifi-btn--ghost">Ändra röstsamtycke</button></div>
+</div></div>
+<ul class="spec"><li>Visas alltid innan mikrofonen aktiveras, även för återkommande användare.</li><li>Rösten upprepar meningen "Du pratar med en AI-agent" i början av samtalet.</li></ul></section>
+
+<section class="blk"><h2>Samtyckesdialog (inga mörka mönster) <code>.tifi-consent</code></h2>
+<div class="cons-stage">
+<div class="tifi-consent" role="dialog" aria-modal="true" aria-labelledby="ct">
+<h2 id="ct">Cookies och röst</h2>
+<p>Vi använder nödvändiga cookies för att TIFI ska fungera. Med ditt samtycke mäter vi också hur demon används. Röstinspelning frågar vi om separat.</p>
+<div class="tifi-consent__opts">
+<div class="tifi-toggle"><label for="k0"><b>Nödvändiga</b><small>Inloggning och inställningar. Krävs.</small></label><span class="lock">Alltid på</span></div>
+<div class="tifi-toggle"><label for="k1"><b>Analys</b><small>Anonym statistik om hur demon används.</small></label><input type="checkbox" role="switch" id="k1"></div>
+<div class="tifi-toggle is-focus"><label for="k2"><b>Röstinspelning</b><small>Spara röstsamtal med AI-tigrarna för felsökning. Av som standard.</small></label><input type="checkbox" role="switch" id="k2"></div>
+</div>
+<div class="tifi-consent__actions"><button class="tifi-btn tifi-btn--choice tifi-btn--lg">Avvisa</button><button class="tifi-btn tifi-btn--choice tifi-btn--lg">Godkänn</button></div>
+<p style="margin:12px 0 0;font-size:12.5px"><a href="#" style="color:var(--tifi-orange-text)">Spara mina val</a> · <a href="#" style="color:var(--tifi-text-2)">Läs mer om data och röst</a></p>
+</div></div>
+<ul class="spec"><li>"Godkänn" och "Avvisa" har samma storlek, färg och vikt (<code class="tifi-mono">.tifi-btn--choice</code>). Ingen knapp är förvald.</li><li>Inga reglage är påslagna från början. Röstinspelning är ett eget reglage. Godkänn gäller bara Analys, aldrig röst.</li><li>Stänger man dialogen räknas det som Avvisa. Valen kan ändras senare under Inställningar.</li></ul></section>
+</div>
+
+<div class="g g2">
+<section class="blk"><h2>Knappar <code>.tifi-btn--primary · --secondary · --ghost · --choice</code></h2>
+<div class="row"><button class="tifi-btn tifi-btn--primary">Skapa</button><button class="tifi-btn tifi-btn--primary is-hover">Hover</button><button class="tifi-btn tifi-btn--primary is-focus">Fokus</button><button class="tifi-btn tifi-btn--primary" disabled>Inaktiv</button></div>
+<div class="row" style="margin-top:10px"><button class="tifi-btn tifi-btn--secondary">Tillbaka</button><button class="tifi-btn tifi-btn--secondary is-hover">Hover</button><button class="tifi-btn tifi-btn--secondary is-focus">Fokus</button><button class="tifi-btn tifi-btn--ghost">Ghost</button><button class="tifi-btn tifi-btn--choice">Avvisa</button></div>
+<span class="cap">Fokus: 2 px ring #FF9A4D med 2 px mörk distans (--tifi-focus-ring). Text på orange är alltid #0B0B0C (7,5:1), aldrig vit (2,6:1).</span></section>
+
+<section class="blk states"><h2>Fält och fokus <code>.tifi-input · .tifi-check · .tifi-toggle</code></h2>
+<div class="g g2" style="gap:14px">
+<div class="tifi-field"><label class="tifi-label" for="i1">Standard</label><input class="tifi-input" id="i1" placeholder="t.ex. en lugn trendtiger"><span class="tifi-hint">Beskriv tigern i en mening.</span></div>
+<div class="tifi-field"><label class="tifi-label" for="i2">Fokus</label><input class="tifi-input is-focus" id="i2" value="en snabb momentumtiger"><span class="tifi-hint">Orange kant och glow.</span></div>
+<div class="tifi-field"><label class="tifi-label" for="i3">Fel</label><input class="tifi-input" id="i3" value="kort" aria-invalid="true" aria-describedby="i3h"><span class="tifi-hint tifi-hint--error" id="i3h">⚠ Minst 12 tecken.</span></div>
+<div class="tifi-field"><label class="tifi-label" for="i4">OK</label><input class="tifi-input" id="i4" type="password" value="tigerpapper-2026" aria-describedby="i4h"><span class="tifi-hint tifi-hint--ok" id="i4h">✓ Lösenorden matchar</span></div>
+</div>
+<label class="tifi-check" for="cc1" style="margin-top:4px"><input type="checkbox" id="cc1" checked><span><b>Ikryssad.</b> Orange kryssruta med mörk bock.</span></label>
+<label class="tifi-check is-focus" for="cc2" style="margin-top:8px"><input type="checkbox" id="cc2"><span><b>Fokus.</b> Synlig fokusring på kryssrutan.</span></label>
+<div class="row" style="margin-top:12px;gap:22px"><div class="tifi-toggle"><input type="checkbox" role="switch" id="tg1" checked aria-label="På"><label for="tg1">På</label></div><div class="tifi-toggle"><input type="checkbox" role="switch" id="tg2" aria-label="Av"><label for="tg2">Av</label></div><div class="tifi-toggle is-focus"><input type="checkbox" role="switch" id="tg3" aria-label="Fokus"><label for="tg3">Fokus</label></div></div>
+</section>
+</div>
+
+<section class="blk"><h2>Palett och kontrast <code>tokens.css</code></h2><div class="sw"><div><i style="background:#07080A"></i><span><b>--tifi-bg-0</b>#07080A</span></div><div><i style="background:#0E0F12"></i><span><b>--tifi-bg-1</b>#0E0F12</span></div><div><i style="background:#15171B"></i><span><b>--tifi-bg-2</b>#15171B</span></div><div><i style="background:#1D2026"></i><span><b>--tifi-bg-3</b>#1D2026</span></div><div><i style="background:#2A2D34"></i><span><b>--tifi-line</b>#2A2D34</span></div><div><i style="background:#393D46"></i><span><b>--tifi-line-2</b>#393D46</span></div><div><i style="background:#F3F1EE"></i><span><b>--tifi-text-1</b>#F3F1EE · 15,9:1</span></div><div><i style="background:#B9B4AC"></i><span><b>--tifi-text-2</b>#B9B4AC · 8,7:1</span></div><div><i style="background:#948F87"></i><span><b>--tifi-text-3</b>#948F87 · 5,6:1</span></div><div><i style="background:#FF7A1A"></i><span><b>--tifi-orange</b>#FF7A1A · svart text 7,5:1</span></div><div><i style="background:#FF9A4D"></i><span><b>--tifi-orange-text</b>#FF9A4D · 8,5:1</span></div><div><i style="background:#9A8CFF"></i><span><b>--tifi-ai</b>#9A8CFF · 6,5:1</span></div><div><i style="background:#3DDC97"></i><span><b>--tifi-up</b>#3DDC97 · 10,2:1</span></div><div><i style="background:#FF5D7A"></i><span><b>--tifi-down</b>#FF5D7A · 6,1:1</span></div><div><i style="background:#FF7A1A"></i><span><b>--tifi-t1</b>#FF7A1A</span></div><div><i style="background:#FFB547"></i><span><b>--tifi-t2</b>#FFB547</span></div><div><i style="background:#EDE6DA"></i><span><b>--tifi-t3</b>#EDE6DA</span></div><div><i style="background:#0B0B0C"></i><span><b>--tifi-on-orange</b>#0B0B0C</span></div></div>
+<span class="cap">Typsnitt: Space Grotesk (rubriker) · Inter (UI) · JetBrains Mono (siffror, etiketter). Samma som i Gitgram Terminal Volt.</span></section>
+</div>
+</main>
+<p class="pg-foot">Inte finansiell rådgivning. Pappershandel med simulerade pengar. Öppen källkod, MIT-licens, ingen garanti.</p>
+</div>
+</body>
+</html>

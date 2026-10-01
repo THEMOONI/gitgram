@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 64" width="196" height="64" role="img" aria-label="TIFI">
+  <title>TIFI</title>
+  <defs>
+    <linearGradient id="tifiOrange" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF9A4D"/><stop offset="1" stop-color="#E8590C"/>
+    </linearGradient>
+  </defs>
+  <!-- mark: geometric tiger head -->
+  <g>
+    <path d="M9 5 L24 13 L13 23 Z" fill="url(#tifiOrange)"/>
+    <path d="M55 5 L40 13 L51 23 Z" fill="url(#tifiOrange)"/>
+    <path d="M32 9 L50 14 L59 30 L53 47 L32 59 L11 47 L5 30 L14 14 Z" fill="url(#tifiOrange)"/>
+    <g fill="#0B0B0C">
+      <path d="M29 11 L35 11 L33.5 23 L30.5 23 Z"/>
+      <path d="M17 17 L27 22 L18 25 Z"/><path d="M47 17 L37 22 L46 25 Z"/>
+      <path d="M6 31 L17 34 L8 38 Z"/><path d="M58 31 L47 34 L56 38 Z"/>
+      <path d="M10 41 L19 41 L13 46 Z"/><path d="M54 41 L45 41 L51 46 Z"/>
+      <path d="M18 30 L28 33 L20 36 Z"/><path d="M46 30 L36 33 L44 36 Z"/>
+      <path d="M27 43 L37 43 L32 48 Z"/>
+    </g>
+  </g>
+  <!-- wordmark: TIFI built from rectangles (no font dependency) -->
+  <g fill="#F3F1EE" transform="translate(80 0)">
+    <rect x="0" y="12" width="32" height="9"/><rect x="11.5" y="12" width="9" height="40"/>
+    <rect x="40" y="12" width="9" height="40"/>
+    <rect x="57" y="12" width="9" height="40"/><rect x="57" y="12" width="29" height="9"/><rect x="57" y="28.5" width="23" height="8.5"/>
+    <rect x="94" y="12" width="9" height="40" fill="#FF7A1A"/>
+  </g>
+</svg>
