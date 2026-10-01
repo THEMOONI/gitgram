@@ -1,5 +1,12 @@
 // TIFI tables. Append-only for decisions and treasury transfers.
 // Portfolio cash still lives in the paper engine; these rows are the TIFI book.
+//
+// Price retention: there is no quote-history table. Polled spot or market
+// snapshots are not stored. The paper book keeps the fill price
+// (tifi_world_fills.price_micro, at buy, sell, and settlement), the position,
+// the settlement result, and one overwritten current mid
+// (tifi_world_positions.last_mid_micro). A future poll log must keep at most
+// the last 24 hours.
 
 function ensureTifiSchema(db: any): void {
   db.exec(`

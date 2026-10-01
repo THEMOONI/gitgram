@@ -12,8 +12,12 @@ const { assertOwnerPassword } = require('../lib/tifi/auth.ts') as {
   assertOwnerPassword: (db: any, userId: number, password: string, clock?: () => Date) => void;
 };
 const { loadBoard, worldPanel } = require('../lib/tifi/board.ts') as {
-  loadBoard: (db: any, userId: number) => any;
+  loadBoard: (db: any, userId: number, env?: any) => any;
   worldPanel: (db: any, userId: number, snapshot: any, now: Date, env?: any) => any;
+};
+const { marketCopy, publicText } = require('../lib/tifi/labels.ts') as {
+  marketCopy: (env?: any) => { flashVenue: string };
+  publicText: (value: unknown, env?: any) => string;
 };
 const { subscribe } = require('../lib/tifi/events.ts') as { subscribe: (fn: (event: any) => void) => () => void };
 const { moveCash, listTigers, setTigerVenue } = require('../lib/tifi/treasury.ts') as {
@@ -72,6 +76,8 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
   function flash(req: any): any {
     const value = req.session.tifiFlash || null;
     if (value) delete req.session.tifiFlash;
+    if (value && value.ok) value.ok = publicText(value.ok, process.env);
+    if (value && value.error) value.error = publicText(value.error, process.env);
     return value;
   }
 
@@ -109,7 +115,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     } catch {
       snapshot.note = 'Flödet kunde inte läsas. Visar det simulerade flödet.';
     }
-    const board = loadBoard(db, userId);
+    const board = loadBoard(db, userId, process.env);
     board.world = worldPanel(db, userId, snapshot, now, process.env);
     return board;
   }
@@ -284,7 +290,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
       const tiger = ownedTiger(req);
       const venue = String(req.body.venue || '');
       setTigerVenue(db, req.tifiUser.id, tiger.id, venue);
-      const label = venue === 'paper' ? 'pappersmarknaden' : 'World-marknader (papper)';
+      const label = venue === 'paper' ? 'pappersmarknaden' : marketCopy(process.env).flashVenue;
       req.session.tifiFlash = { ok: tiger.name + ' handlar nu på ' + label + '. Inga riktiga pengar.' };
       return req.session.save(() => res.redirect('/tifi'));
     } catch (err) {

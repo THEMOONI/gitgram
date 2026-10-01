@@ -52,6 +52,7 @@ function evaluateWorldGuard(ctx: {
   status: string;
   pauseReason: string | null;
   sellingSharesMicro?: bigint;
+  neutral?: boolean;
 }): WorldGuardResult {
   if (ctx.status === 'paused' && ctx.pauseReason === 'owner') {
     return {
@@ -72,7 +73,7 @@ function evaluateWorldGuard(ctx: {
   if (ctx.action === 'abstain' || !ctx.outcome || !ctx.side) {
     return {
       verdict: 'allow',
-      reasons: ['Avstår. Ingen World-order i det här fönstret.'],
+      reasons: [ctx.neutral ? 'Avstår. Ingen order i det här fönstret.' : 'Avstår. Ingen World-order i det här fönstret.'],
       codes: ['ABSTAIN'],
       order: null,
     };
@@ -169,7 +170,7 @@ function evaluateWorldGuard(ctx: {
   }
   return {
     verdict: 'allow',
-    reasons: ['Gränserna släppte igenom en simulerad World-insats. Ingen hävstång.'],
+    reasons: [ctx.neutral ? 'Gränserna släppte igenom en simulerad insats. Ingen hävstång.' : 'Gränserna släppte igenom en simulerad World-insats. Ingen hävstång.'],
     codes: [],
     order: {
       marketId: ctx.marketId,

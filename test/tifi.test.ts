@@ -18,7 +18,9 @@ const { createDecisionModel } = require('../lib/tifi/model.ts');
 const { decideTiger } = require('../lib/tifi/decide.ts');
 const { seedDemo } = require('../lib/tifi/seed.ts');
 const { splitEqual, freeMinor } = require('../lib/tifi/treasury.ts');
-const { svMoney } = require('../lib/tifi/board.ts');
+const { svMoney, worldPanel } = require('../lib/tifi/board.ts');
+const { marketCopy, displaySeries, publicText } = require('../lib/tifi/labels.ts');
+const { worldAssumptions } = require('../lib/tifi/world-venue.ts');
 const engine = require('../lib/paper/engine');
 
 function bar(close: number, high?: number, low?: number, volume = 0): any {
@@ -95,6 +97,43 @@ function openDb() {
     },
   };
 }
+
+test('neutral market labels hide World and use SIM names', async () => {
+  const env = { TIFI_MARKET_LABELS: 'neutral' };
+  const copy = marketCopy(env);
+  const series = ['BTC', 'ETH', 'SOL'].map((name) => displaySeries(name, 'WX' + name + '15M', env));
+  const blob = JSON.stringify({
+    copy,
+    series,
+    fee: worldAssumptions(env).feeNote,
+    scrub: publicText('World-marknader (papper) WXBTC15M WXETH15M WXSOL15M World-avgift', env),
+  });
+  assert.match(blob, /SIM-BTC-15M/);
+  assert.match(blob, /SIM-ETH-15M/);
+  assert.match(blob, /SIM-SOL-15M/);
+  assert.equal(/world/i.test(blob), false);
+  assert.match(marketCopy({}).title, /World-marknader \(papper, endast eget bruk, simulerat\/kedjedata\)/);
+  assert.match(worldAssumptions({}).feeNote, /World-avgift/);
+  assert.equal(displaySeries('BTC', 'WXBTC15M', {}), 'WXBTC15M');
+
+  const ctx = openDb();
+  try {
+    const snap = await createWorldFeed({}, { now: () => new Date('2026-10-01T12:05:00.000Z') }).listActive();
+    const panel = worldPanel(ctx.db, 1, snap, new Date('2026-10-01T12:05:00.000Z'), env);
+    const text = JSON.stringify(panel);
+    assert.equal(/world/i.test(text), false);
+    assert.match(text, /SIM-BTC-15M/);
+    assert.match(text, /SIM-ETH-15M/);
+    assert.match(text, /SIM-SOL-15M/);
+    assert.match(text, /simulerat|Simulerat/);
+    const tables = ctx.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row: any) => row.name);
+    for (const name of ['tifi_world_quotes', 'tifi_world_ticks', 'tifi_price_history', 'tifi_market_snapshots']) {
+      assert.equal(tables.includes(name), false);
+    }
+  } finally {
+    ctx.close();
+  }
+});
 
 test('svMoney with 0 decimals has no trailing comma', () => {
   assert.equal(svMoney(34_000_000n, 0), '34');
@@ -541,6 +580,11 @@ test('treasury split and dashboard are paper only', async () => {
     assert.match(page.text, /WXETH15M/);
     assert.match(page.text, /WXSOL15M/);
     assert.match(page.text, /Ingen export, ingen delning och ingen offentlig visning/);
+    assert.match(page.text, /World \(papper\)/);
+    const tables = ctx.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((row: any) => row.name);
+    for (const name of ['tifi_world_quotes', 'tifi_world_ticks', 'tifi_price_history', 'tifi_market_snapshots']) {
+      assert.equal(tables.includes(name), false);
+    }
     const tiger = ctx.db.prepare('SELECT id, venue FROM tifi_tigers WHERE slot = 1').get();
     assert.equal(tiger.venue, 'world');
     const token = page.text.match(/name="_csrf" value="([a-f0-9]+)"/);

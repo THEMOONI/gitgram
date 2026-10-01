@@ -24,6 +24,19 @@ const { worldAdjustment, listPositions, worldAssumptions, positionValue } = requ
   worldAssumptions: (env?: any) => { feeNote: string };
   positionValue: (shares: bigint, mid: bigint) => bigint;
 };
+const { displaySeries, marketCopy, publicText } = require('./labels.ts') as {
+  displaySeries: (underlying: string | null | undefined, seriesTicker?: string | null, env?: Record<string, string | undefined>) => string;
+  marketCopy: (env?: Record<string, string | undefined>) => {
+    neutral: boolean;
+    title: string;
+    venueLabel: string;
+    venueChip: string;
+    venueOption: string;
+    paperOption: string;
+    emptyPosition: string;
+  };
+  publicText: (value: unknown, env?: Record<string, string | undefined>) => string;
+};
 
 const MICRO_PER_MINOR = 10000n;
 const ACCENT = ['#FF7A1A', '#FFB547', '#EDE6DA'];
@@ -136,7 +149,8 @@ function primaryAction(bars: any[]): string {
   return on ? on.label : 'AVVAKTA';
 }
 
-function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
+function presentTiger(db: any, row: any, rank: number, leaderPct: number, env?: Record<string, string | undefined>): any {
+  const copy = marketCopy(env);
   const state = engine.readState(db, row.portfolio_id);
   const adjust = worldAdjustment(db, row.id);
   const equity = (state ? asMicro(state.equityMicro) : 0n) + adjust.cashDelta + adjust.openMark;
@@ -198,7 +212,8 @@ function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
     personality: /^den /.test(String(row.tagline || '')),
     strategy: row.strategy,
     venue: row.venue === 'paper' ? 'paper' : 'world',
-    venueLabel: row.venue === 'paper' ? 'Pappersmarknad' : 'World-marknader',
+    venueLabel: row.venue === 'paper' ? 'Pappersmarknad' : copy.venueLabel,
+    venueChip: row.venue === 'paper' ? 'perp (sim)' : copy.venueChip,
     strategyLabel: row.strategy === 'breakout' ? 'Utbrott' : row.strategy === 'trend' ? 'Trend' : 'Momentum',
     coin: pos ? pos.symbol : (symbols[0] || ''),
     accent: 'var(--tifi-t' + slot + ')',
@@ -235,8 +250,8 @@ function presentTiger(db: any, row: any, rank: number, leaderPct: number): any {
     decision: decision ? {
       verdict: decision.guard_verdict,
       action: primaryAction(bars),
-      rationale: decision.rationale,
-      reasons: JSON.parse(decision.guard_reasons_json),
+      rationale: publicText(decision.rationale, env),
+      reasons: JSON.parse(decision.guard_reasons_json).map((reason: string) => publicText(reason, env)),
       probabilities: probs,
       bars,
       ts: decision.ts,
@@ -296,50 +311,58 @@ function freshness(fetchedAt: string | null, now: Date): string {
 }
 
 function worldPanel(db: any, userId: number, snapshot: any, now: Date, env?: Record<string, string | undefined>): any {
+  const copy = marketCopy(env);
   const assumptions = worldAssumptions(env);
   const markets = (snapshot && snapshot.markets) || [];
   const live = !!(snapshot && snapshot.live && snapshot.source === 'world');
   const markedSimulated = markets.length > 0 && markets.every((market: any) => String(market.source || '').toLowerCase() === 'simulated');
   const simulated = !live || markedSimulated;
   return {
-    title: 'World-marknader (papper, endast eget bruk, simulerat/kedjedata)',
+    title: copy.title,
     privateUse: true,
     exportable: false,
     sourceLabel: simulated ? 'Simulerat flöde' : 'Kedjedata från lokal läsare · papper, endast eget bruk',
     fresh: freshness(snapshot && snapshot.fetchedAt, now),
-    note: snapshot && snapshot.note,
+    note: snapshot && snapshot.note ? publicText(snapshot.note, env) : snapshot && snapshot.note,
     simulated,
-    assumptions: assumptions.feeNote,
-    markets: markets.map((market: any) => ({
-      id: market.id,
-      title: market.title,
-      underlying: market.underlying,
-      seriesTicker: market.seriesTicker || '',
-      simulated: !live || String(market.source || snapshot.source || '').toLowerCase() === 'simulated',
-      countdown: countdown(market.closesAt, now),
-      outcomes: (market.outcomes || []).map((outcome: any) => ({
-        label: outcome.label,
-        bid: pricePct(outcome.bid),
-        ask: pricePct(outcome.ask),
-        mid: pricePct(outcome.mid),
-      })),
-    })),
+    assumptions: publicText(assumptions.feeNote, env),
+    emptyPosition: copy.emptyPosition,
+    venueOption: copy.venueOption,
+    paperOption: copy.paperOption,
+    markets: markets.map((market: any) => {
+      const seriesTicker = displaySeries(market.underlying, market.seriesTicker || '', env);
+      return {
+        id: copy.neutral ? seriesTicker : market.id,
+        title: copy.neutral ? '' : publicText(market.title, env),
+        underlying: market.underlying,
+        seriesTicker,
+        simulated: !live || String(market.source || snapshot.source || '').toLowerCase() === 'simulated',
+        countdown: countdown(market.closesAt, now),
+        outcomes: (market.outcomes || []).map((outcome: any) => ({
+          label: outcome.label,
+          bid: pricePct(outcome.bid),
+          ask: pricePct(outcome.ask),
+          mid: pricePct(outcome.mid),
+        })),
+      };
+    }),
     tigers: listTigers(db, userId).map((tiger) => {
       const book = listPositions(db, tiger.id);
+      const shown = (row: any) => (copy.neutral ? displaySeries(null, row.market_id, env) : publicText(row.title, env));
       return {
         id: tiger.id,
         name: tiger.name,
         venue: tiger.venue === 'paper' ? 'paper' : 'world',
-        venueLabel: tiger.venue === 'paper' ? 'Pappersmarknad' : 'World-marknader',
+        venueLabel: tiger.venue === 'paper' ? 'Pappersmarknad' : copy.venueLabel,
         open: book.open.map((row: any) => ({
           outcome: row.outcome,
-          title: row.title,
+          title: shown(row),
           shares: svMoney(asMicro(row.shares_micro), 2),
           value: svMoney(positionValue(asMicro(row.shares_micro), asMicro(row.last_mid_micro)), 2),
         })),
         settled: book.settled.map((row: any) => ({
           outcome: row.outcome,
-          title: row.title,
+          title: shown(row),
           payout: svMoney(asMicro(row.payout_micro), 2),
           won: asMicro(row.payout_micro) > 0n,
         })),
@@ -348,7 +371,7 @@ function worldPanel(db: any, userId: number, snapshot: any, now: Date, env?: Rec
   };
 }
 
-function loadBoard(db: any, userId: number): any {
+function loadBoard(db: any, userId: number, env?: Record<string, string | undefined>): any {
   const tigers = listTigers(db, userId);
   const cards = tigers.map((row) => {
     const equity = tigerBookEquity(db, row);
@@ -361,7 +384,7 @@ function loadBoard(db: any, userId: number): any {
   const span = maxPct - minPct;
   const rankOf = new Map<number, number>();
   ranked.forEach((item, index) => rankOf.set(item.row.id, index + 1));
-  const presented = cards.map((item) => presentTiger(db, item.row, rankOf.get(item.row.id) || 0, leaderPct));
+  const presented = cards.map((item) => presentTiger(db, item.row, rankOf.get(item.row.id) || 0, leaderPct, env));
   const treasury = getTreasury(db, userId);
   const treasuryState = treasury ? engine.readState(db, treasury.portfolio_id) : null;
   const transfers = db.prepare(`
@@ -461,8 +484,8 @@ function loadBoard(db: any, userId: number): any {
         accent: 'var(--tifi-t' + slot + ')',
         verdict: row.guard_verdict,
         action,
-        rationale: row.rationale,
-        reasons: JSON.parse(row.guard_reasons_json),
+        rationale: publicText(row.rationale, env),
+        reasons: JSON.parse(row.guard_reasons_json).map((reason: string) => publicText(reason, env)),
         probabilities: probs,
         bars: [{ label: action, pct, on: true }],
         pct: pct + ' %',

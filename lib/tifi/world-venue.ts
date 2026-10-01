@@ -5,6 +5,9 @@
 const { appendAudit } = require('../paper/audit') as { appendAudit: (db: any, entry: any) => string };
 const { asMicro } = require('../paper/money') as { asMicro: (value: any) => bigint };
 const engine = require('../paper/engine');
+const { marketCopy } = require('./labels.ts') as {
+  marketCopy: (env?: Record<string, string | undefined>) => { feeNote: (coef: number) => string };
+};
 
 const SCALE = 1000000n;
 const DEFAULT_FEE_COEF = 800;
@@ -35,7 +38,7 @@ function worldAssumptions(env?: Record<string, string | undefined>): {
     feeCoef,
     minOrderMicro: 0n,
     closeBufferSec,
-    feeNote: 'Avgift ' + feeCoef + '×(1−p) bps per avslut är en obekräftad tredjepartsuppskattning, inte en bekräftad World-avgift.',
+    feeNote: marketCopy(env).feeNote(feeCoef),
   };
 }
 
@@ -333,6 +336,8 @@ function settlePosition(db: any, args: {
   return { ok: true, hash, payoutMicro: payout, won };
 }
 
+// Overwrites the open position's current mid. This is the mark the book needs,
+// not a history of polled prices.
 function markOpenToFeed(db: any, userId: number, markets: any[]): void {
   const byId = new Map<string, any>();
   for (const market of markets || []) byId.set(market.id, market);

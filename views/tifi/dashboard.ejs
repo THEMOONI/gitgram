@@ -36,7 +36,7 @@
     </div>
     <div class="rk"><b>#<%= tiger.rank %></b><small><%= tiger.gap %></small></div>
   </div>
-    <div class="strat"><span class="k">Strategi</span><b><%= tiger.strategyLabel %></b><span>·</span><% if (tiger.coin) { %><span class="tifi-chip"><%= tiger.coin %></span><% } %><span><%= tiger.venue === 'world' ? 'World (papper)' : 'perp (sim)' %></span></div>
+    <div class="strat"><span class="k">Strategi</span><b><%= tiger.strategyLabel %></b><span>·</span><% if (tiger.coin) { %><span class="tifi-chip"><%= tiger.coin %></span><% } %><span><%= tiger.venueChip %></span></div>
   <div>
     <div class="bal"><span class="big"><%= tiger.equity %></span><span class="cur">DEMO</span></div>
     <div class="bal" style="margin-top:4px"><span class="ch <%= tiger.pnlUp ? 'tifi-up' : (tiger.pnlDown ? 'tifi-down' : 'tifi-flat') %>"><%= tiger.pnlUp ? '▲' : (tiger.pnlDown ? '▼' : '') %> <%= tiger.pnl %> (<%= tiger.percentLabel %>)</span><span class="tifi-sim">sim · saldo</span></div>
@@ -153,7 +153,7 @@
   <% board.world.tigers.forEach(function (tiger) { %>
   <div class="wt">
     <div class="r"><b><%= tiger.name %></b><span><%= tiger.venueLabel %></span></div>
-    <% if (!tiger.open.length) { %><p class="fn">Ingen öppen World-position.</p><% } %>
+    <% if (!tiger.open.length) { %><p class="fn"><%= board.world.emptyPosition %></p><% } %>
     <% tiger.open.forEach(function (pos) { %>
     <p class="fn"><%= pos.outcome %> · <%= pos.shares %> andelar · värde <%= pos.value %> DEMO<% if (pos.title) { %> · <%= pos.title %><% } %></p>
     <% }) %>
@@ -165,8 +165,8 @@
       <div class="tifi-field">
         <label class="tifi-label" for="venue-<%= tiger.id %>">Marknad för <%= tiger.name %></label>
         <select class="tifi-input" id="venue-<%= tiger.id %>" name="venue">
-          <option value="world"<%= tiger.venue === 'world' ? ' selected' : '' %>>World-marknader (papper)</option>
-          <option value="paper"<%= tiger.venue === 'paper' ? ' selected' : '' %>>Befintlig pappersmarknad</option>
+          <option value="world"<%= tiger.venue === 'world' ? ' selected' : '' %>><%= board.world.venueOption %></option>
+          <option value="paper"<%= tiger.venue === 'paper' ? ' selected' : '' %>><%= board.world.paperOption %></option>
         </select>
       </div>
       <div class="tifi-field">

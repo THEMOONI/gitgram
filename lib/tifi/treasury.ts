@@ -7,6 +7,9 @@ const { TifiError, iso, userActor } = require('./errors.ts') as {
   userActor: (userId: number) => any;
 };
 const { validateLimits } = require('./guard.ts') as { validateLimits: (limits: any) => string[] };
+const { marketCopy } = require('./labels.ts') as {
+  marketCopy: (env?: Record<string, string | undefined>) => { venueOption: string };
+};
 
 const WHITELIST = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'];
 
@@ -241,7 +244,7 @@ function createTiger(db: any, userId: number, config: any, slot: number | null, 
 
 function setTigerVenue(db: any, userId: number, tigerId: number, venue: string): void {
   if (venue !== 'paper' && venue !== 'world') {
-    throw new TifiError('VENUE', 'Välj pappersmarknad eller World-marknader (papper).');
+    throw new TifiError('VENUE', 'Välj pappersmarknad eller ' + marketCopy(process.env).venueOption + '.');
   }
   const info = db.prepare('UPDATE tifi_tigers SET venue = ? WHERE id = ? AND user_id = ?').run(venue, tigerId, userId);
   if (!info.changes) throw new TifiError('NOT_FOUND', 'Tigern finns inte.', 404);

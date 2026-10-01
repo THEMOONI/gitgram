@@ -16,6 +16,10 @@ const { pickMarket, tigerUnderlying } = require('./world-feed.ts') as {
   tigerUnderlying: (tiger: any) => string;
 };
 const venue = require('./world-venue.ts') as any;
+const { marketCopy, neutralLabels } = require('./labels.ts') as {
+  marketCopy: (env?: Record<string, string | undefined>) => { rationaleSuffix: string };
+  neutralLabels: (env?: Record<string, string | undefined>) => boolean;
+};
 
 function tigerLimits(row: any): any {
   return limitsOf({
@@ -95,7 +99,7 @@ async function decideWorldTiger(db: any, tiger: any, args: {
   const heldOutcome = held && asMicro(held.shares_micro) > 0n ? held.outcome : null;
   const mapped = market ? mapToWorld(signal, modelProposal, heldOutcome) : { action: 'abstain' as const, outcome: null, side: null };
   const rationale = (modelProposal.rationale || 'Lokal modell.')
-    + ' Förslaget gäller pappersandelar i en 15-minuters World-marknad, inte en riktig order och ingen rekommendation.';
+    + marketCopy(args.env).rationaleSuffix;
   const proposal = {
     action: mapped.action,
     venue: 'world',
@@ -135,6 +139,7 @@ async function decideWorldTiger(db: any, tiger: any, args: {
     status,
     pauseReason,
     sellingSharesMicro: selling ? asMicro(selling.shares_micro) : 0n,
+    neutral: neutralLabels(args.env),
   });
   if (!market && mapped.action === 'abstain') {
     guard.reasons = ['Ingen aktiv 15-minutersmarknad för ' + underlying + '. Avstår.'];
