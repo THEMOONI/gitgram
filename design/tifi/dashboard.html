@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIFI · Dashboard (paper trading, demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="tifi-components.css">
+<style>
+/* mockup wrapper only: the page itself */
+html,body{margin:0;background:#07080A}
+
+.pg-foot{text-align:center;color:var(--tifi-text-3);font-size:12.5px;margin:18px 0 28px;padding:0 16px}
+.dash{padding:16px 24px 0;max-width:1600px;margin:0 auto}
+.top{display:flex;align-items:stretch;gap:12px;margin-bottom:16px}
+.brand{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:250px}
+.brand-row{display:flex;align-items:center;gap:10px}
+.brand img{height:30px;display:block}
+.brand-sub{font-size:12px;color:var(--tifi-text-3)}
+.stats{display:flex;gap:10px;flex:1}
+.stat{flex:1;min-width:0;background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:9px 12px}
+.stat .k{font-family:var(--tifi-font-mono);font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--tifi-text-3);font-weight:600}
+.stat .v{font-family:var(--tifi-font-mono);font-size:21px;font-weight:700;letter-spacing:-.5px;line-height:1.25;white-space:nowrap}
+.stat .v small{font-size:11px;font-weight:600;color:var(--tifi-text-3);letter-spacing:0;margin-left:3px}
+.stat .s{font-size:11.5px;color:var(--tifi-text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{min-width:230px;display:flex;flex-direction:column;justify-content:center;gap:8px;background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:9px 14px}
+.status .r1{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--tifi-text-2)}
+.status .r1 i{width:8px;height:8px;border-radius:50%;background:var(--tifi-text-3);flex:none}
+.status .r1 b{display:block;font-family:var(--tifi-font-mono);font-size:10.5px;letter-spacing:.7px;color:var(--tifi-text-3);text-transform:uppercase}
+.status .r2{display:flex;gap:8px;align-items:center;font-family:var(--tifi-font-mono);font-size:12px;color:var(--tifi-text-2)}
+.status .r2 i{width:8px;height:8px;border-radius:50%;background:var(--tifi-up);box-shadow:0 0 0 3px var(--tifi-up-soft)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 372px;gap:14px;align-items:stretch}
+.tcard{--acc:var(--tifi-orange);background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 7%,transparent),transparent 220px),var(--tifi-bg-1);border:1px solid var(--tifi-line);border-top:2px solid var(--acc);border-radius:var(--tifi-radius-lg);padding:14px 14px 12px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.tcard.lead{box-shadow:0 0 0 1px color-mix(in srgb,var(--acc) 40%,transparent),0 0 34px -6px color-mix(in srgb,var(--acc) 40%,transparent)}
+.th{display:flex;gap:11px;align-items:center}
+.th img{width:58px;height:58px;border-radius:50%;object-fit:cover;border:2px solid var(--acc);box-shadow:0 0 16px -2px color-mix(in srgb,var(--acc) 60%,transparent);flex:none}
+.th .nm{font-family:var(--tifi-font-display);font-size:19px;font-weight:700;line-height:1.1;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.th .tg{font-size:12.5px;color:var(--tifi-text-2);margin-top:2px}
+.th .rk{margin-left:auto;text-align:right;flex:none}
+.th .rk b{font-family:var(--tifi-font-display);font-size:22px;display:block;line-height:1}
+.th .rk small{font-size:11px;color:var(--tifi-text-3);white-space:nowrap}
+.strat{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--tifi-text-3)}
+.strat .tifi-chip{background:var(--acc)}
+.strat span.k{font-family:var(--tifi-font-mono);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase}
+.strat b{color:var(--tifi-text-1);font-weight:600}
+.bal{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.bal .big{font-family:var(--tifi-font-mono);font-size:30px;font-weight:700;letter-spacing:-1px;line-height:1}
+.bal .cur{font-family:var(--tifi-font-mono);font-size:13px;color:var(--tifi-text-3);font-weight:600}
+.bal .ch{font-family:var(--tifi-font-mono);font-size:12.5px;font-weight:600}
+.pos{background:var(--tifi-bg-2);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius);padding:10px 12px}
+.pos .r{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pos .side{font-family:var(--tifi-font-mono);font-size:15px;font-weight:700}
+.pos .side small{font-size:11px;margin-right:4px}
+.pos .val{font-family:var(--tifi-font-mono);font-weight:700;font-size:14px}
+.pos .u{font-size:12px;color:var(--tifi-text-2);margin-top:3px}
+.pos .ems{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.pos .ems div{background:var(--tifi-bg-1);border-radius:6px;padding:4px 7px}
+.pos .ems span{display:block;font-size:10px;font-family:var(--tifi-font-mono);text-transform:uppercase;letter-spacing:.5px;color:var(--tifi-text-3)}
+.pos .ems b{font-family:var(--tifi-font-mono);font-size:12px;font-weight:600;white-space:nowrap}
+.pos.flat .side{color:var(--tifi-text-2)}
+.chart{position:relative;flex:1;display:flex;flex-direction:column}
+.chart svg{display:block;width:100%;height:auto;flex:1;min-height:150px}
+.chart .yl{position:absolute;right:2px;font-family:var(--tifi-font-mono);font-size:10px;color:var(--tifi-text-3);background:color-mix(in srgb,var(--tifi-bg-1) 70%,transparent);padding:0 3px;border-radius:3px}
+.chart .ax{display:flex;justify-content:space-between;font-family:var(--tifi-font-mono);font-size:10.5px;color:var(--tifi-text-3);margin-top:2px}
+.dec .dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.dec .row{display:grid;grid-template-columns:92px 1fr 38px;gap:8px;align-items:center;font-family:var(--tifi-font-mono);font-size:11.5px;margin-bottom:5px}
+.dec .row b{font-weight:700;white-space:nowrap}
+.dec .row .tifi-bar>i{background:var(--acc)}
+.dec .row.dim{color:var(--tifi-text-3)} .dec .row.dim .tifi-bar>i{background:var(--tifi-line-2)}
+.dec .row span:last-child{text-align:right}
+.dec .why{font-size:12px;color:var(--tifi-text-2);margin-top:4px}
+.bud{display:grid;grid-template-columns:1fr;gap:9px}
+.bud .l{display:flex;justify-content:space-between;font-size:11.5px;color:var(--tifi-text-3);margin-bottom:5px}
+.bud .l b{font-family:var(--tifi-font-mono);color:var(--tifi-text-2);font-weight:500}
+.bud .tifi-bar>i{background:var(--acc)}
+.tf{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border-top:1px solid var(--tifi-line);padding-top:10px}
+.tf span{display:block;font-family:var(--tifi-font-mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--tifi-text-3)}
+.tf b{font-family:var(--tifi-font-mono);font-size:12.5px;font-weight:600}
+.side-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--tifi-bg-1);border:1px solid var(--tifi-line);border-radius:var(--tifi-radius-lg);padding:13px 14px}
+.panel .ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.panel .ph small{font-family:var(--tifi-font-mono);font-size:11px;color:var(--tifi-text-3)}
+.lb{display:grid;grid-template-columns:14px 26px 54px 1fr auto;gap:8px;align-items:center;margin-bottom:8px;font-size:13px}
+.lb:last-child{margin-bottom:0}
+.lb .n{font-family:var(--tifi-font-mono);color:var(--tifi-text-3)}
+.lb img{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1.5px solid var(--acc)}
+.lb .tifi-bar{height:7px}.lb .tifi-bar>i{background:var(--acc)}
+.lb .eq{font-family:var(--tifi-font-mono);font-weight:700;font-size:12.5px;white-space:nowrap}
+.feed{display:flex;flex-direction:column;gap:6px;max-height:384px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+.fe{--acc:var(--tifi-orange);background:var(--tifi-bg-2);border-left:3px solid var(--acc);border-radius:7px;padding:7px 9px}
+.fe .r{display:flex;align-items:center;gap:7px;font-size:12.5px}
+.fe .r i{width:7px;height:7px;border-radius:50%;background:var(--acc);flex:none}
+.fe .r .who{font-weight:600}
+.fe .r .act{font-family:var(--tifi-font-mono);font-weight:700;font-size:12px}
+.fe .r .m{margin-left:auto;font-family:var(--tifi-font-mono);font-size:11.5px;white-space:nowrap}
+.fe .r .m .p{color:var(--tifi-text-2);margin-left:5px}
+.fe .r .m .t{color:var(--tifi-text-3);margin-left:5px}
+.fe .seg{display:grid;gap:3px;margin-top:5px;font-family:var(--tifi-font-mono);font-size:9.5px;text-transform:uppercase}
+.fe .seg span{background:var(--tifi-bg-3);color:var(--tifi-text-3);text-align:center;border-radius:3px;padding:1px 0;white-space:nowrap;overflow:hidden}
+.fe .seg span.on{background:var(--acc);color:var(--tifi-on-orange);font-weight:700}
+.fe .note{font-size:11.5px;color:var(--tifi-text-2);margin-top:3px}
+.pool .tot{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.pool .tot b{font-family:var(--tifi-font-mono);font-size:24px;font-weight:700;letter-spacing:-.5px}
+.pool .tot span{font-family:var(--tifi-font-mono);font-size:12px;color:var(--tifi-text-3)}
+.stack{display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px;margin-bottom:12px}
+.stack i{display:block;height:100%}
+.alloc{display:grid;grid-template-columns:1fr auto auto;gap:4px 12px;font-size:12px;align-items:center}
+.alloc .hd{font-family:var(--tifi-font-mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--tifi-text-3)}
+.alloc .nm{display:flex;align-items:center;gap:7px;font-weight:600}
+.alloc .nm i{width:9px;height:9px;border-radius:3px;background:var(--acc)}
+.alloc .num{font-family:var(--tifi-font-mono);text-align:right;white-space:nowrap}
+.pool .fn{font-size:11.5px;color:var(--tifi-text-3);margin-top:10px;border-top:1px solid var(--tifi-line);padding-top:8px}
+@media (max-width:900px){
+  .dash{padding:12px 14px 0}
+  .top{flex-direction:column;gap:10px}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .stat:first-child{grid-column:1/-1}
+  .stat .v{font-size:18px}
+  .status{min-width:0;flex-direction:row;justify-content:space-between;flex-wrap:wrap}
+  .grid{grid-template-columns:1fr;gap:12px}
+  .chart svg{height:130px;min-height:0;flex:none}
+  .tcard .chart{flex:none}
+}
+
+</style>
+</head>
+<body>
+<div class="tifi" data-app="tifi">
+<div class="tifi-sim-banner" role="status" aria-live="polite">
+  <span class="tifi-sim-banner__stripes" aria-hidden="true"></span>
+  <span class="tifi-paper">Paper trading</span>
+  <span class="tifi-sim-banner__text"><b>SIMULERING</b> · Simulering – DEMO har inget värde</span>
+  <span class="tifi-sim-banner__meta">Simulerade pengar · inga riktiga order · inte finansiell rådgivning</span>
+</div>
+<main class="dash">
+<header class="top">
+<div class="brand"><div class="brand-row"><img src="brand/tifi-logo.svg" alt="TIFI"><span class="tifi-paper">Paper trading · Demo</span></div>
+<div class="brand-sub">dag 1 · 3 AI-tigrar · perps med simulerade pengar · inte finansiell rådgivning</div></div>
+<div class="stats"><div class="stat"><div class="k">Totalt P&amp;L</div><div class="v"><span class="tifi-up">+0,05</span><small>DEMO</small></div><div class="s">2 order · sim</div></div><div class="stat"><div class="k">Avgifter</div><div class="v">0,39<small>DEMO</small></div><div class="s">taker 0,05 % · sim</div></div><div class="stat"><div class="k">Funding</div><div class="v">+0,00<small>DEMO</small></div><div class="s">var 8:e timme · sim</div></div><div class="stat"><div class="k">Modellkostnad</div><div class="v">0,0005<small>USD</small></div><div class="s">idag · tak 2 USD · exempel</div></div><div class="stat"><div class="k">Antal beslut</div><div class="v">24</div><div class="s">alla loggas</div></div></div>
+<div class="status"><div class="r1"><i></i><div><b>Avstämning</b>pappershandel: simulerade böcker</div></div><div class="r2"><i></i>live · 09:15:42 UTC</div></div>
+</header>
+<div class="grid">
+<article class="tcard" style="--acc:var(--tifi-t1)" aria-label="TIFI 1">
+<div class="th"><img src="portraits/tifi-1-256.png" alt="Porträtt av TIFI 1, en tiger i svart techwear">
+<div style="min-width:0"><div class="nm">TIFI 1 <span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div><div class="tg">den otåliga · Utbrott</div></div>
+<div class="rk"><b>#2</b><small>0,03 efter</small></div></div>
+<div class="strat"><span class="k">Strategi</span><b>Utbrott</b><span>·</span><span class="tifi-chip">BTC</span><span>perp (sim)</span></div>
+<div><div class="bal"><span class="big">1 000,02</span><span class="cur">DEMO</span></div>
+<div class="bal" style="margin-top:4px"><span class="ch tifi-up">▲ +0,02 (+0,00 %)</span><span class="tifi-sim">sim · saldo</span></div></div>
+<div class="pos"><div class="r"><span class="side tifi-up"><small>▲</small>LÅNG <span style="color:var(--tifi-text-1)">BTC</span></span><span class="val">440 <span class="tifi-sim">DEMO</span></span></div>
+<div class="u tifi-up">▲ +0,08 orealiserat · 41 min <span class="tifi-sim">(sim)</span></div>
+<div class="ems"><div><span>Entry</span><b>65 210,0</b></div><div><span>Mark</span><b>65 222,0</b></div><div><span>Stop</span><b>64 880,0</b></div></div></div>
+<div class="chart"><svg viewBox="0 0 300 150" preserveAspectRatio="none" role="img" aria-label="Simulerad equity-kurva för 1">
+<defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FF7A1A" stop-opacity=".30"/><stop offset="1" stop-color="#FF7A1A" stop-opacity="0"/></linearGradient></defs>
+<line x1="0" y1="75" x2="300" y2="75" stroke="#393D46" stroke-dasharray="3 4"/>
+<line x1="0" y1="20" x2="300" y2="20" stroke="#2A2D34"/><line x1="0" y1="130" x2="300" y2="130" stroke="#2A2D34"/>
+<path d="M0 78 L19 80 L38 74 L56 70 L75 72 L94 66 L112 68 L131 62 L150 64 L169 60 L188 63 L206 58 L225 61 L244 56 L262 54 L281 57 L300 52 L300 150 L0 150 Z" fill="url(#g1)"/><path d="M0 78 L19 80 L38 74 L56 70 L75 72 L94 66 L112 68 L131 62 L150 64 L169 60 L188 63 L206 58 L225 61 L244 56 L262 54 L281 57 L300 52" fill="none" stroke="#FF7A1A" stroke-width="2" vector-effect="non-scaling-stroke"/>
+<circle cx="300.0" cy="52" r="3.5" fill="#FF7A1A"/>
+</svg><span class="yl" style="top:6%">+0,7 %</span><span class="yl" style="top:44%">start</span><span class="yl" style="bottom:22px">−0,7 %</span><div class="ax"><span>08:14</span><span>simulerad · equity</span><span>09:15</span></div></div>
+<div class="dec"><div class="dh"><span class="tifi-card__title">Senaste beslut</span><span class="tifi-mono tifi-muted" style="font-size:11px">692 ms</span></div><div class="row "><b>BEHÅLL</b><div class="tifi-bar"><i style="width:86%"></i></div><span>86 %</span></div><div class="row dim"><b>STÄNG</b><div class="tifi-bar"><i style="width:11%"></i></div><span>11 %</span></div><div class="row dim"><b>BLANKA</b><div class="tifi-bar"><i style="width:3%"></i></div><span>3 %</span></div><div class="why">Priset håller sig över utbrottsnivån.</div></div>
+<div class="bud"><div><div class="l"><span>Trades idag</span><b>1 / 3</b></div><div class="tifi-bar"><i style="width:33%"></i></div></div>
+<div><div class="l"><span>Avgiftsbudget</span><b>0,22 / 1,00</b></div><div class="tifi-bar"><i style="width:22%"></i></div></div></div>
+<div class="tf"><div><span>Avgifter</span><b>0,22</b></div><div><span>Funding</span><b>+0,00</b></div><div><span>Modell</span><b>0,0002</b></div><div><span>Anrop</span><b>8</b></div></div>
+</article><article class="tcard" style="--acc:var(--tifi-t2)" aria-label="TIFI 2">
+<div class="th"><img src="portraits/tifi-2-256.png" alt="Porträtt av TIFI 2, en tiger i svart techwear">
+<div style="min-width:0"><div class="nm">TIFI 2 <span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div><div class="tg">den tålmodiga · Trend</div></div>
+<div class="rk"><b>#3</b><small>0,07 efter</small></div></div>
+<div class="strat"><span class="k">Strategi</span><b>Trend</b><span>·</span><span class="tifi-chip">ETH</span><span>perp (sim)</span></div>
+<div><div class="bal"><span class="big">999,98</span><span class="cur">DEMO</span></div>
+<div class="bal" style="margin-top:4px"><span class="ch tifi-down">▼ −0,02 (−0,00 %)</span><span class="tifi-sim">sim · saldo</span></div></div>
+<div class="pos flat"><div class="r"><span class="side">FLAT <span style="font-weight:500;font-size:12px;color:var(--tifi-text-3)">· 2 min i kassa</span></span><span class="val tifi-muted">0 <span class="tifi-sim">DEMO</span></span></div>
+<div class="ems"><div><span>Entry</span><b class="tifi-muted">–</b></div><div><span>Mark</span><b class="tifi-muted">–</b></div><div><span>Stop</span><b class="tifi-muted">–</b></div></div></div>
+<div class="chart"><svg viewBox="0 0 300 150" preserveAspectRatio="none" role="img" aria-label="Simulerad equity-kurva för 2">
+<defs><linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FFB547" stop-opacity=".30"/><stop offset="1" stop-color="#FFB547" stop-opacity="0"/></linearGradient></defs>
+<line x1="0" y1="75" x2="300" y2="75" stroke="#393D46" stroke-dasharray="3 4"/>
+<line x1="0" y1="20" x2="300" y2="20" stroke="#2A2D34"/><line x1="0" y1="130" x2="300" y2="130" stroke="#2A2D34"/>
+<path d="M0 75 L19 75 L38 75 L56 75 L75 76 L94 76 L112 76 L131 77 L150 77 L169 77 L188 77 L206 77 L225 77 L244 77 L262 77 L281 77 L300 77 L300 150 L0 150 Z" fill="url(#g2)"/><path d="M0 75 L19 75 L38 75 L56 75 L75 76 L94 76 L112 76 L131 77 L150 77 L169 77 L188 77 L206 77 L225 77 L244 77 L262 77 L281 77 L300 77" fill="none" stroke="#FFB547" stroke-width="2" vector-effect="non-scaling-stroke"/>
+<circle cx="300.0" cy="77" r="3.5" fill="#FFB547"/>
+</svg><span class="yl" style="top:6%">+0,7 %</span><span class="yl" style="top:44%">start</span><span class="yl" style="bottom:22px">−0,7 %</span><div class="ax"><span>08:14</span><span>simulerad · equity</span><span>09:15</span></div></div>
+<div class="dec"><div class="dh"><span class="tifi-card__title">Senaste beslut</span><span class="tifi-mono tifi-muted" style="font-size:11px">685 ms</span></div><div class="row "><b>AVVAKTA</b><div class="tifi-bar"><i style="width:100%"></i></div><span>100 %</span></div><div class="why">Ingen tydlig trend på 4 h. Står utanför.</div></div>
+<div class="bud"><div><div class="l"><span>Trades idag</span><b>0 / 2</b></div><div class="tifi-bar"><i style="width:0%"></i></div></div>
+<div><div class="l"><span>Avgiftsbudget</span><b>0,00 / 1,00</b></div><div class="tifi-bar"><i style="width:0%"></i></div></div></div>
+<div class="tf"><div><span>Avgifter</span><b>0,00</b></div><div><span>Funding</span><b>+0,00</b></div><div><span>Modell</span><b>0,0001</b></div><div><span>Anrop</span><b>6</b></div></div>
+</article><article class="tcard lead" style="--acc:var(--tifi-t3)" aria-label="TIFI 3">
+<div class="th"><img src="portraits/tifi-3-256.png" alt="Porträtt av TIFI 3, en tiger i svart techwear">
+<div style="min-width:0"><div class="nm">TIFI 3 <span class="tifi-badge-ai" title="Den här tigern är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-tiger</span></div><div class="tg">den snabba · Momentum</div></div>
+<div class="rk"><b>#1</b><small>leder</small></div></div>
+<div class="strat"><span class="k">Strategi</span><b>Momentum</b><span>·</span><span class="tifi-chip">SOL</span><span>perp (sim)</span></div>
+<div><div class="bal"><span class="big">1 000,05</span><span class="cur">DEMO</span></div>
+<div class="bal" style="margin-top:4px"><span class="ch tifi-up">▲ +0,05 (+0,01 %)</span><span class="tifi-sim">sim · saldo</span></div></div>
+<div class="pos"><div class="r"><span class="side tifi-up"><small>▲</small>LÅNG <span style="color:var(--tifi-text-1)">SOL</span></span><span class="val">333 <span class="tifi-sim">DEMO</span></span></div>
+<div class="u tifi-up">▲ +0,22 orealiserat · 1 min <span class="tifi-sim">(sim)</span></div>
+<div class="ems"><div><span>Entry</span><b>142,31</b></div><div><span>Mark</span><b>142,40</b></div><div><span>Stop</span><b>140,90</b></div></div></div>
+<div class="chart"><svg viewBox="0 0 300 150" preserveAspectRatio="none" role="img" aria-label="Simulerad equity-kurva för 3">
+<defs><linearGradient id="g3" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#EDE6DA" stop-opacity=".30"/><stop offset="1" stop-color="#EDE6DA" stop-opacity="0"/></linearGradient></defs>
+<line x1="0" y1="75" x2="300" y2="75" stroke="#393D46" stroke-dasharray="3 4"/>
+<line x1="0" y1="20" x2="300" y2="20" stroke="#2A2D34"/><line x1="0" y1="130" x2="300" y2="130" stroke="#2A2D34"/>
+<path d="M0 86 L19 82 L38 84 L56 78 L75 80 L94 74 L112 76 L131 70 L150 72 L169 64 L188 66 L206 58 L225 62 L244 52 L262 48 L281 40 L300 34 L300 150 L0 150 Z" fill="url(#g3)"/><path d="M0 86 L19 82 L38 84 L56 78 L75 80 L94 74 L112 76 L131 70 L150 72 L169 64 L188 66 L206 58 L225 62 L244 52 L262 48 L281 40 L300 34" fill="none" stroke="#EDE6DA" stroke-width="2" vector-effect="non-scaling-stroke"/>
+<circle cx="300.0" cy="34" r="3.5" fill="#EDE6DA"/>
+</svg><span class="yl" style="top:6%">+0,7 %</span><span class="yl" style="top:44%">start</span><span class="yl" style="bottom:22px">−0,7 %</span><div class="ax"><span>08:14</span><span>simulerad · equity</span><span>09:15</span></div></div>
+<div class="dec"><div class="dh"><span class="tifi-card__title">Senaste beslut</span><span class="tifi-mono tifi-muted" style="font-size:11px">665 ms</span></div><div class="row "><b>RID</b><div class="tifi-bar"><i style="width:100%"></i></div><span>100 %</span></div><div class="why">Momentum uppåt på 15 min. Följer med.</div></div>
+<div class="bud"><div><div class="l"><span>Trades idag</span><b>1 / 3</b></div><div class="tifi-bar"><i style="width:33%"></i></div></div>
+<div><div class="l"><span>Avgiftsbudget</span><b>0,17 / 3,00</b></div><div class="tifi-bar"><i style="width:6%"></i></div></div></div>
+<div class="tf"><div><span>Avgifter</span><b>0,17</b></div><div><span>Funding</span><b>+0,00</b></div><div><span>Modell</span><b>0,0003</b></div><div><span>Anrop</span><b>8</b></div></div>
+</article>
+<aside class="side-col">
+<section class="panel" aria-labelledby="lb-h"><div class="ph"><h2 class="tifi-card__title" id="lb-h" style="margin:0">Topplista</h2><small>saldo · DEMO</small></div><div class="lb" style="--acc:var(--tifi-t3)"><span class="n">1</span><img src="portraits/tifi-3-256.png" alt=""><span style="font-weight:600">TIFI 3</span><div class="tifi-bar"><i style="width:100%"></i></div><span class="eq">1 000,05</span></div><div class="lb" style="--acc:var(--tifi-t1)"><span class="n">2</span><img src="portraits/tifi-1-256.png" alt=""><span style="font-weight:600">TIFI 1</span><div class="tifi-bar"><i style="width:96%"></i></div><span class="eq">1 000,02</span></div><div class="lb" style="--acc:var(--tifi-t2)"><span class="n">3</span><img src="portraits/tifi-2-256.png" alt=""><span style="font-weight:600">TIFI 2</span><div class="tifi-bar"><i style="width:92%"></i></div><span class="eq">999,98</span></div></section>
+<section class="panel" aria-labelledby="fd-h"><div class="ph"><h2 class="tifi-card__title" id="fd-h" style="margin:0">Live-beslutsflöde</h2><small>11/min · sim</small></div><div class="feed"><div class="fe" style="--acc:var(--tifi-t3)"><div class="r"><i></i><span class="who">TIFI 3</span><span class="act">RID</span><span class="m"><span class="tifi-up">▲ +0,22</span><span class="p">100 %</span><span class="t">665 ms</span></span></div><div class="seg" style="grid-template-columns:1fr"><span class="on">RID</span></div></div><div class="fe" style="--acc:var(--tifi-t1)"><div class="r"><i></i><span class="who">TIFI 1</span><span class="act">BEHÅLL</span><span class="m"><span class="tifi-down">▼ −0,06</span><span class="p">86 %</span><span class="t">692 ms</span></span></div><div class="seg" style="grid-template-columns:3fr 1fr 1fr"><span class="on">BEHÅLL</span><span class="">STÄNG</span><span class="">BLANKA</span></div></div><div class="fe" style="--acc:var(--tifi-t2)"><div class="r"><i></i><span class="who">TIFI 2</span><span class="act">AVVAKTA</span><span class="m"><span class="tifi-flat">+0,00</span><span class="p">100 %</span><span class="t">685 ms</span></span></div><div class="note">Ingen tydlig trend på 4 h</div></div><div class="fe" style="--acc:var(--tifi-t3)"><div class="r"><i></i><span class="who">TIFI 3</span><span class="act">RID</span><span class="m"><span class="tifi-up">▲ +0,11</span><span class="p">100 %</span><span class="t">669 ms</span></span></div><div class="seg" style="grid-template-columns:1fr"><span class="on">RID</span></div></div><div class="fe" style="--acc:var(--tifi-t1)"><div class="r"><i></i><span class="who">TIFI 1</span><span class="act">BEHÅLL</span><span class="m"><span class="tifi-up">▲ +0,02</span><span class="p">94 %</span><span class="t">923 ms</span></span></div><div class="seg" style="grid-template-columns:3fr 1fr 1fr"><span class="on">BEHÅLL</span><span class="">STÄNG</span><span class="">BLANKA</span></div></div><div class="fe" style="--acc:var(--tifi-t2)"><div class="r"><i></i><span class="who">TIFI 2</span><span class="act">AVVAKTA</span><span class="m"><span class="tifi-flat">+0,00</span><span class="p">100 %</span><span class="t">701 ms</span></span></div><div class="note">Priset 1,0 % från utbrottsnivå</div></div><div class="fe" style="--acc:var(--tifi-t3)"><div class="r"><i></i><span class="who">TIFI 3</span><span class="act">RID</span><span class="m"><span class="tifi-down">▼ −0,04</span><span class="p">97 %</span><span class="t">887 ms</span></span></div><div class="seg" style="grid-template-columns:1fr"><span class="on">RID</span></div></div></div></section>
+<section class="panel pool" aria-labelledby="pool-h">
+<div class="ph"><h2 class="tifi-card__title" id="pool-h" style="margin:0">Marknadskassa &amp; fördelning</h2><span class="tifi-paper tifi-paper--outline">Sim</span></div>
+<div class="tot"><b>3 000,00</b><span>DEMO · total kassa (sim)</span></div>
+<div class="stack" role="img" aria-label="Fördelning: TIFI 1, 2 och 3 har en tredjedel var"><i style="flex:1;background:var(--tifi-t1)"></i><i style="flex:1;background:var(--tifi-t2)"></i><i style="flex:1;background:var(--tifi-t3)"></i></div>
+<div class="alloc">
+<span class="hd">Tiger</span><span class="hd" style="text-align:right">Tilldelat</span><span class="hd" style="text-align:right">I position / fritt</span>
+<span class="nm" style="--acc:var(--tifi-t1)"><i></i>TIFI 1 · 33,3 %</span><span class="num">1 000,00</span><span class="num">440 / 560,02</span>
+<span class="nm" style="--acc:var(--tifi-t2)"><i></i>TIFI 2 · 33,3 %</span><span class="num">1 000,00</span><span class="num">0 / 999,98</span>
+<span class="nm" style="--acc:var(--tifi-t3)"><i></i>TIFI 3 · 33,3 %</span><span class="num">1 000,00</span><span class="num">333 / 667,05</span>
+</div>
+<p class="fn">Exempeldata. Kassan delas lika mellan tigrarna vid start. Alla belopp är DEMO och har inget värde.</p>
+</section>
+</aside>
+</div>
+</main>
+<p class="pg-foot">Inte finansiell rådgivning. Pappershandel med simulerade pengar. Öppen källkod, MIT-licens, ingen garanti.</p>
+</div>
+</body>
+</html>

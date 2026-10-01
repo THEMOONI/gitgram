@@ -1,0 +1,180 @@
+<%- include('../partials/header') %>
+<%- include('partials/head') %>
+<div class="tifi" data-app="tifi">
+<%- include('partials/banner') %>
+<main class="dash">
+<% if (formError) { %><p class="tifi-alert err" role="alert"><%= formError %></p><% } %>
+<% if (formOk) { %><p class="tifi-alert ok" role="status"><%= formOk %></p><% } %>
+<header class="top">
+  <div class="brand">
+    <div class="brand-row">
+      <img class="logo" src="/tifi/brand/tifi-logo.svg" alt="TIFI">
+      <span class="tifi-paper">PAPER TRADING · DEMO</span>
+    </div>
+    <div class="brand-sub">dag <%= board.day %> · <%= board.tigerCount %> AI-tigrar · perps med simulerade pengar · inte finansiell rådgivning</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="k">Totalt P&amp;L</div><div class="v"><span data-total="pnl" class="<%= board.totals.pnlUp ? 'tifi-up' : (board.totals.pnlDown ? 'tifi-down' : '') %>"><%= board.totals.pnl %></span><small>DEMO</small></div><div class="s"><%= board.totals.orders %> order · sim</div></div>
+    <div class="stat"><div class="k">Avgifter</div><div class="v"><span data-total="fees"><%= board.totals.fees %></span><small>DEMO</small></div><div class="s">sim</div></div>
+    <div class="stat"><div class="k">Funding</div><div class="v"><span data-total="funding"><%= board.totals.funding %></span><small>DEMO</small></div><div class="s">sim</div></div>
+    <div class="stat"><div class="k">Modellkostnad</div><div class="v"><span data-total="model"><%= board.totals.modelCost %></span><small>USD</small></div><div class="s">idag · exempel</div></div>
+    <div class="stat"><div class="k">Antal beslut</div><div class="v" data-total="decisions"><%= board.totals.decisions %></div><div class="s">alla loggas</div></div>
+  </div>
+  <div class="status">
+    <div class="r1"><i></i><div><b>Avstämning</b>pappershandel: simulerade böcker</div></div>
+    <div class="r2"><i class="<%= board.runner.running ? '' : 'off' %>"></i><span data-clock>live · <%= board.clock %> UTC</span></div>
+  </div>
+</header>
+<div class="grid">
+<% board.tigers.forEach(function (tiger) { %>
+<article class="tcard<%= tiger.rank === 1 ? ' lead' : '' %>" style="--acc:<%= tiger.accent %>" aria-label="<%= tiger.name %>">
+  <div class="th">
+    <img src="<%= tiger.portrait %>" alt="Porträtt av <%= tiger.name %>, en tiger i svart techwear">
+    <div style="min-width:0">
+      <div class="nm"><%= tiger.name %> <%- include('partials/badge', { label: 'AI-tiger' }) %></div>
+      <div class="tg"><%= tiger.tagline %><% if (tiger.personality) { %> · <%= tiger.strategyLabel %><% } %></div>
+    </div>
+    <div class="rk"><b>#<%= tiger.rank %></b><small><%= tiger.gap %></small></div>
+  </div>
+  <div class="strat"><span class="k">Strategi</span><b><%= tiger.strategyLabel %></b><span>·</span><% if (tiger.coin) { %><span class="tifi-chip"><%= tiger.coin %></span><% } %><span>perp (sim)</span></div>
+  <div>
+    <div class="bal"><span class="big"><%= tiger.equity %></span><span class="cur">DEMO</span></div>
+    <div class="bal" style="margin-top:4px"><span class="ch <%= tiger.pnlUp ? 'tifi-up' : (tiger.pnlDown ? 'tifi-down' : 'tifi-flat') %>"><%= tiger.pnlUp ? '▲' : (tiger.pnlDown ? '▼' : '') %> <%= tiger.pnl %> (<%= tiger.percentLabel %>)</span><span class="tifi-sim">sim · saldo</span></div>
+  </div>
+  <% if (tiger.flat) { %>
+  <div class="pos flat">
+    <div class="r"><span class="side">FLAT <span style="font-weight:500;font-size:12px;color:var(--tifi-text-3)">· i kassa</span></span><span class="val tifi-muted">0 <span class="tifi-sim">DEMO</span></span></div>
+    <div class="ems"><div><span>Entry</span><b class="tifi-muted">–</b></div><div><span>Mark</span><b class="tifi-muted">–</b></div><div><span>Stop</span><b class="tifi-muted">–</b></div></div>
+  </div>
+  <% } else { %>
+  <div class="pos">
+    <div class="r"><span class="side tifi-up"><small>▲</small>LÅNG <span style="color:var(--tifi-text-1)"><%= tiger.position.symbol %></span></span><span class="val"><%= tiger.positionNotional %> <span class="tifi-sim">DEMO</span></span></div>
+    <div class="u <%= tiger.position.unrealUp ? 'tifi-up' : 'tifi-down' %>"><%= tiger.position.unrealUp ? '▲' : '▼' %> <%= tiger.position.unreal %> orealiserat <span class="tifi-sim">(sim)</span></div>
+    <div class="ems"><div><span>Entry</span><b><%= tiger.position.entry %></b></div><div><span>Mark</span><b><%= tiger.position.mark %></b></div><div><span>Stop</span><b><%= tiger.position.stop %></b></div></div>
+  </div>
+  <% } %>
+  <div class="chart">
+    <svg viewBox="0 0 300 150" preserveAspectRatio="none" role="img" aria-label="Simulerad equity-kurva för <%= tiger.name %>">
+      <defs><linearGradient id="g<%= tiger.id %>" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="<%= tiger.color %>" stop-opacity=".30"/><stop offset="1" stop-color="<%= tiger.color %>" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" y1="75" x2="300" y2="75" stroke="#393D46" stroke-dasharray="3 4"/>
+      <line x1="0" y1="20" x2="300" y2="20" stroke="#2A2D34"/><line x1="0" y1="130" x2="300" y2="130" stroke="#2A2D34"/>
+      <path d="<%= tiger.chart.area %>" fill="url(#g<%= tiger.id %>)"/>
+      <path d="<%= tiger.chart.line %>" fill="none" stroke="<%= tiger.color %>" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <circle cx="<%= tiger.chart.x %>" cy="<%= tiger.chart.y %>" r="3.5" fill="<%= tiger.color %>"/>
+    </svg>
+    <span class="yl" style="top:6%"><%= tiger.chart.top %></span>
+    <span class="yl" style="top:44%">start</span>
+    <span class="yl" style="bottom:22px"><%= tiger.chart.bottom %></span>
+    <div class="ax"><span><%= tiger.chartStart %></span><span>simulerad · equity</span><span><%= tiger.chartEnd %></span></div>
+  </div>
+  <div class="dec">
+    <div class="dh"><span class="tifi-card__title">Senaste beslut</span><span class="tifi-mono tifi-muted" style="font-size:11px">sim</span></div>
+    <% tiger.decision.bars.forEach(function (bar) { %>
+    <div class="row<%= bar.on ? '' : ' dim' %>"><b><%= bar.label %></b><div class="tifi-bar"><i style="width:<%= bar.pct %>%"></i></div><span><%= bar.pct %> %</span></div>
+    <% }) %>
+    <div class="why"><%= tiger.decision.rationale %></div>
+  </div>
+  <div class="bud">
+    <div><div class="l"><span>Trades idag</span><b><%= tiger.tradesToday %> / <%= tiger.tradeCap %></b></div><div class="tifi-bar"><i style="width:<%= tiger.tradeWidth %>%"></i></div></div>
+    <div><div class="l"><span>Avgiftsbudget</span><b><%= tiger.feesToday %> / <%= tiger.feeBudget %></b></div><div class="tifi-bar"><i style="width:<%= tiger.feeWidth %>%"></i></div></div>
+  </div>
+  <div class="tf">
+    <div><span>Avgifter</span><b><%= tiger.fees %></b></div>
+    <div><span>Funding</span><b><%= tiger.funding %></b></div>
+    <div><span>Modell</span><b><%= tiger.modelCost %></b></div>
+    <div><span>Anrop</span><b><%= tiger.calls %></b></div>
+  </div>
+  <form method="post" action="/tifi/tigers/<%= tiger.id %>/<%= tiger.status === 'paused' ? 'resume' : 'pause' %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% if (tiger.status === 'paused') { %>
+      <label class="tifi-label" for="resume-<%= tiger.id %>">Ägarlösenord</label>
+      <input class="tifi-input" id="resume-<%= tiger.id %>" type="password" name="owner_password" autocomplete="current-password" required>
+      <button class="tifi-btn tifi-btn--secondary" type="submit">Återuppta</button>
+    <% } else { %>
+      <button class="tifi-btn tifi-btn--ghost" type="submit">Pausa <%= tiger.name %></button>
+    <% } %>
+  </form>
+</article>
+<% }) %>
+<aside class="side-col">
+  <section class="panel" aria-labelledby="lb-h">
+    <div class="ph"><h2 class="tifi-card__title" id="lb-h" style="margin:0">Topplista</h2><small>avkastning · sim</small></div>
+    <% board.leaderboard.forEach(function (row) { %>
+    <div class="lb" style="--acc:<%= row.accent %>"><span class="n"><%= row.rank %></span><img src="<%= row.portrait %>" alt=""><span style="font-weight:600"><%= row.name %></span><div class="tifi-bar"><i style="width:<%= row.bar %>%"></i></div><span class="eq"><%= row.percentLabel %></span></div>
+    <% }) %>
+  </section>
+  <section class="panel" aria-labelledby="fd-h">
+    <div class="ph"><h2 class="tifi-card__title" id="fd-h" style="margin:0">Live-beslutsflöde</h2><small>sim</small></div>
+    <div class="feed" id="tifi-feed">
+      <% board.feed.forEach(function (item) { %>
+      <div class="fe" style="--acc:<%= item.accent %>">
+        <div class="r"><i></i><span class="who"><%= item.tiger %></span><span class="act"><%= item.action %></span><span class="m"><span class="p"><%= item.pct %></span></span></div>
+        <div class="note"><%= item.rationale %></div>
+      </div>
+      <% }) %>
+    </div>
+  </section>
+  <section class="panel pool" aria-labelledby="pool-h">
+    <div class="ph"><h2 class="tifi-card__title" id="pool-h" style="margin:0">Marknadskassa &amp; fördelning</h2><span class="tifi-paper tifi-paper--outline">SIM</span></div>
+    <div class="tot"><b><%= board.pool %></b><span>DEMO · total kassa (sim)</span></div>
+    <div class="stack" role="img" aria-label="Fördelning mellan tigrarna">
+      <% board.allocation.forEach(function (row) { %><i style="flex:<%= row.weight %>;background:<%= row.accent %>"></i><% }) %>
+    </div>
+    <div class="alloc">
+      <span class="hd">Tiger</span><span class="hd" style="text-align:right">Tilldelat</span><span class="hd" style="text-align:right">I position / fritt</span>
+      <% board.allocation.forEach(function (row) { %>
+      <span class="nm" style="--acc:<%= row.accent %>"><i></i><%= row.name %> · <%= row.share %> %</span><span class="num"><%= row.allocated %></span><span class="num"><%= row.inPosition %> / <%= row.free %></span>
+      <% }) %>
+    </div>
+    <p class="fn">Kassan delas lika mellan tigrarna vid start. Alla belopp är DEMO och har inget värde.</p>
+  </section>
+</aside>
+</div>
+<section class="panel owner" aria-labelledby="own-h">
+  <div class="ph"><h2 class="tifi-card__title" id="own-h" style="margin:0">Ägaråtgärder</h2><small>kräver ägarlösenord för flytt och återupptagning</small></div>
+  <form method="post" action="/tifi/treasury/move">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="tifi-field"><label class="tifi-label" for="from">Från</label>
+      <select class="tifi-input" id="from" name="from"><option value="treasury">Kassa</option><% board.tigers.forEach(function (tiger) { %><option value="<%= tiger.id %>"><%= tiger.name %></option><% }) %></select>
+    </div>
+    <div class="tifi-field"><label class="tifi-label" for="to">Till</label>
+      <select class="tifi-input" id="to" name="to"><% board.tigers.forEach(function (tiger) { %><option value="<%= tiger.id %>"><%= tiger.name %></option><% }) %><option value="treasury">Kassa</option></select>
+    </div>
+    <div class="tifi-field"><label class="tifi-label" for="amount">Belopp (DEMO)</label><input class="tifi-input" id="amount" name="amount" inputmode="decimal" required></div>
+    <div class="tifi-field"><label class="tifi-label" for="move-pw">Ägarlösenord</label><input class="tifi-input" id="move-pw" type="password" name="owner_password" autocomplete="current-password" required></div>
+    <button class="tifi-btn tifi-btn--secondary" type="submit">Flytta simulerad kassa</button>
+  </form>
+  <form method="post" action="/tifi/runner/<%= board.runner.running ? 'stop' : 'start' %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="tifi-btn tifi-btn--secondary" type="submit"><%= board.runner.running ? 'Stoppa' : 'Starta' %></button>
+  </form>
+  <form method="post" action="/tifi/runner/step">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="tifi-btn tifi-btn--ghost" type="submit">Ett steg</button>
+  </form>
+  <% if (board.transfers.length) { %>
+  <p class="fn"><% board.transfers.forEach(function (row) { %><span class="tifi-mono"><%= row.amount %> DEMO · <%= row.from %> → <%= row.to %></span> <% }) %></p>
+  <% } %>
+</section>
+</main>
+<p class="pg-foot"><%= notice %>. <%= simulatedLabel %>. Inte finansiell rådgivning. Pappershandel med simulerade pengar. Öppen källkod, MIT-licens, ingen garanti. <button class="tifi-btn tifi-btn--ghost" id="open-consent" type="button">Cookies och röst</button> · <a class="sheet-link" href="/tifi/components.html">Komponenter</a></p>
+<dialog class="tifi-consent" id="tifi-consent">
+  <h2 id="ct">Cookies och röst</h2>
+  <p>Vi använder nödvändiga cookies för att TIFI ska fungera. Med ditt samtycke mäter vi också hur demon används. Röstinspelning frågar vi om separat.</p>
+  <form method="post" action="/tifi/consent">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="tifi-consent__opts">
+      <div class="tifi-toggle"><label for="k0"><b>Nödvändiga</b><small>Inloggning och inställningar. Krävs.</small></label><span class="tifi-muted">Alltid på</span></div>
+      <div class="tifi-toggle"><label for="k1"><b>Analys</b><small>Anonym statistik om hur demon används.</small></label><input type="checkbox" role="switch" id="k1" name="analytics" value="1"></div>
+      <div class="tifi-toggle"><label for="k2"><b>Röstinspelning</b><small>Spara röstsamtal med AI-tigrarna för felsökning. Av som standard.</small></label><input type="checkbox" role="switch" id="k2" name="voice" value="1"></div>
+    </div>
+    <div class="tifi-consent__actions">
+      <button class="tifi-btn tifi-btn--choice tifi-btn--lg" type="submit" name="choice" value="reject">Avvisa</button>
+      <button class="tifi-btn tifi-btn--choice tifi-btn--lg" type="submit" name="choice" value="approve">Godkänn</button>
+    </div>
+  </form>
+  <p style="margin:12px 0 0;font-size:12.5px">Godkänn slår inte på röstinspelning. Stänger man dialogen räknas det som Avvisa.</p>
+</dialog>
+</div>
+<script src="/tifi/tifi.js"></script>
+<%- include('../partials/footer') %>

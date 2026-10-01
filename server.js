@@ -8,6 +8,7 @@ const moment = require('moment');
 const { csrfProtection } = require('./lib/csrf');
 const { ensureLedgerSchema } = require('./lib/ledger');
 const { ensurePaperSchema } = require('./lib/paper/schema');
+const { ensureTifiSchema } = require('./lib/tifi/schema.ts');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
 let warnedAboutSessionSecret = false;
@@ -66,6 +67,7 @@ function createApp(options = {}) {
   const db = openDatabase(dbPath);
   ensureLedgerSchema(db);
   ensurePaperSchema(db);
+  ensureTifiSchema(db);
   const app = express();
   const port = process.env.PORT || 3000;
   const csrf = csrfProtection();
@@ -77,7 +79,12 @@ function createApp(options = {}) {
   app.use(compression());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(express.static(path.join(__dirname, 'public')));
+  const publicDir = express.static(path.join(__dirname, 'public'));
+  // public/tifi is a directory of design files. Exact /tifi is the dashboard route.
+  app.use((req, res, next) => {
+    if (req.path === '/tifi') return next();
+    return publicDir(req, res, next);
+  });
 
   app.use(session({
     secret: sessionSecret,
@@ -103,6 +110,7 @@ function createApp(options = {}) {
     res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + port;
     res.locals.navWallet = false;
     res.locals.navTrade = false;
+    res.locals.navTifi = false;
     next();
   });
 
@@ -115,6 +123,12 @@ function createApp(options = {}) {
     clock: options.clock,
     geo: options.geo,
     priceCacheKey: options.priceCacheKey,
+  }));
+  app.use('/', require('./routes/tifi.ts')(db, {
+    dataDir,
+    priceFeed: options.priceFeed,
+    clock: options.clock,
+    autoRun: !!options.autoRunTifi,
   }));
   app.use('/', require('./routes/git')(db, { dataDir }));
   app.use('/', require('./routes/repos')(db, { dataDir }));
@@ -141,11 +155,14 @@ function createApp(options = {}) {
 
 if (require.main === module) {
   try {
-    const app = createApp();
+    const app = createApp({ autoRunTifi: true });
     const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-      console.log('🚀 GITGRAM running on http://localhost:' + port);
-    });
+    const host = process.env.HOST;
+    const onListen = () => {
+      console.log('🚀 GITGRAM running on http://' + (host || 'localhost') + ':' + port);
+    };
+    if (host) app.listen(port, host, onListen);
+    else app.listen(port, onListen);
   } catch (err) {
     console.error(err.message);
     process.exit(1);
