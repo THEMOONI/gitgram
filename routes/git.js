@@ -6,6 +6,8 @@ const { spawn } = require('child_process');
 const bcrypt = require('bcryptjs');
 
 module.exports = function(db) {
+  const router = express.Router();
+
   function cleanRepo(name) { return name.replace(/\.git$/, ''); }
   function findRepo(owner, repoRaw) {
     const repo = cleanRepo(repoRaw);
