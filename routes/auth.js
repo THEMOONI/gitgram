@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { isValidUsername } = require('../lib/validate');
+const { isValidUsername, isReservedUsername } = require('../lib/validate');
 const { createLoginLimiter } = require('../lib/login-limit');
 
 function establishSession(req, res, userId) {
@@ -33,6 +33,9 @@ module.exports = function(db, options = {}) {
     }
     if (!isValidUsername(username)) {
       return res.render('register', { title: 'Sign Up - GITGRAM', error: 'Username must be 3-39 characters and use only letters, numbers, underscores, and hyphens' });
+    }
+    if (isReservedUsername(username)) {
+      return res.render('register', { title: 'Sign Up - GITGRAM', error: 'That username is reserved' });
     }
     if (password.length < 6) {
       return res.render('register', { title: 'Sign Up - GITGRAM', error: 'Password too short' });

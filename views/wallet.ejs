@@ -1,0 +1,183 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="/css/wallet.css">
+<div class="wallet-page" data-demo="true" data-disclaimer="<%= disclaimer %>">
+  <div class="wpage">
+    <div class="wrap">
+      <div class="crumbs mono"><a href="/@<%= username %>"><%= username %></a> <span>/</span> wallet</div>
+      <div class="whead">
+        <div>
+          <div class="kicker">Wallet &amp; trading · demo</div>
+          <h1 class="wh1">Wallet</h1>
+          <p class="wsub">Send demo tokens to other Gitgram users and see your simulated history. Nothing on this page moves real money.</p>
+        </div>
+        <div class="whead-actions">
+          <span class="demo-pill">● Demo environment</span>
+          <span class="w-reset">
+            <button type="button" class="btn btn-line" disabled aria-describedby="reset-soon">Reset demo balance</button>
+            <span class="w-soon" id="reset-soon">Coming soon</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="wgrid">
+        <div class="wcol">
+          <section class="dframe o-bal" aria-labelledby="bal-h">
+            <div class="dbanner"><b>DEMO MODE</b><span>· simulated data · no real money</span></div>
+            <div class="bal-body">
+              <div class="bal-main">
+                <div class="lbl" id="bal-h">Available balance</div>
+                <div class="bal-big mono"><span id="balance-display"><%= balance %></span> <span class="unit">GGT</span> <span class="dm">(demo)</span></div>
+                <div class="bal-sub mono">≈ <%= usd %> USD <span class="dm">(demo)</span> · illustrative rate 1.284 <span class="dm">(demo)</span> · not convertible</div>
+                <div class="bal-actions">
+                  <a class="btn btn-primary" href="#transfer">Send tokens</a>
+                  <button type="button" class="btn btn-line" disabled aria-describedby="request-soon">Request</button>
+                  <button type="button" class="btn btn-ghost" id="copy-wallet" data-wallet-id="<%= walletId %>" aria-describedby="copy-note">Copy wallet ID</button>
+                </div>
+                <p class="w-soon" id="request-soon">Request is coming soon.</p>
+                <p class="sr" id="copy-note">Copies the demo wallet id <%= walletId %> for this simulated wallet.</p>
+                <p class="w-copy-live" id="copy-live" role="status"></p>
+              </div>
+              <div class="bal-stats">
+                <div class="stat"><div class="lbl">Received · 30 days</div><div class="mono up"><%= received === '0.00' ? '' : '+' %><%= received %> GGT <span class="dm">(demo)</span></div></div>
+                <div class="stat"><div class="lbl">Sent · 30 days</div><div class="mono down"><%= sent === '0.00' ? '' : '−' %><%= sent %> GGT <span class="dm">(demo)</span></div></div>
+                <div class="stat"><div class="lbl">Pending</div><div class="mono"><%= pending %> GGT <span class="dm">(demo)</span></div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dframe o-hist" aria-labelledby="hist-h">
+            <div class="dbanner"><b>DEMO MODE</b><span>· simulated data · no real money</span></div>
+            <div class="hist-head">
+              <h2 class="h3" id="hist-h">Transaction history</h2>
+              <nav class="seg2" aria-label="History filter">
+                <a href="/wallet" class="<%= flow === 'all' ? 'on' : '' %>"<% if (flow === 'all') { %> aria-current="page"<% } %>>All</a>
+                <a href="/wallet?flow=in" class="<%= flow === 'in' ? 'on' : '' %>"<% if (flow === 'in') { %> aria-current="page"<% } %>>Incoming</a>
+                <a href="/wallet?flow=out" class="<%= flow === 'out' ? 'on' : '' %>"<% if (flow === 'out') { %> aria-current="page"<% } %>>Outgoing</a>
+              </nav>
+            </div>
+            <div id="wallet-loading" class="w-loading" hidden>
+              <div class="w-skel"></div>
+              <div class="w-skel"></div>
+              <div class="w-skel"></div>
+            </div>
+            <% if (empty) { %>
+              <div class="empty">
+                <div class="empty-ic" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16v12H4z"/><path d="M4 7l2-3h12l2 3M9 12h6"/></svg></div>
+                <b><%= empty.title %></b>
+                <p><%= empty.body %></p>
+                <% if (showClaim) { %>
+                  <form method="POST" action="/wallet/grant">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-line" type="submit">Claim welcome grant</button>
+                  </form>
+                <% } %>
+              </div>
+            <% } else { %>
+              <table class="tx">
+                <thead><tr><th>Counterparty</th><th>Message</th><th class="r">Amount · time</th></tr></thead>
+                <tbody>
+                  <% rows.forEach(function (row) { %>
+                    <tr id="tx-<%= row.id %>">
+                      <td>
+                        <span class="cp">
+                          <span class="dirb <%= row.direction %>" title="<%= row.directionLabel %>" aria-label="<%= row.directionLabel %>"><%= row.arrow %></span>
+                          <% if (row.isSystem) { %>
+                            <span class="av" style="background:<%= row.color %>;color:#0A0C0F" aria-hidden="true"><%= row.initial %></span>
+                            <span class="mono">@<%= row.username %></span>
+                          <% } else { %>
+                            <span class="av" style="background:<%= row.color %>;color:#0A0C0F" aria-hidden="true"><%= row.initial %></span>
+                            <a class="mono" href="/@<%= row.username %>">@<%= row.username %></a>
+                          <% } %>
+                        </span>
+                      </td>
+                      <td class="msg"><% if (row.memo) { %><%= row.memo %><% } else { %><span class="msg-empty">No message</span><% } %></td>
+                      <td class="r">
+                        <div class="mono amt <%= row.direction === 'in' ? 'up' : 'down' %>"><%= row.amountLabel %> GGT <span class="dm">(demo)</span></div>
+                        <div class="t"><%= row.when %></div>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            <% } %>
+            <div class="hist-foot"><span>Simulated demo history for this account. Nothing here is real money.</span><a class="link" href="/wallet/export.csv">Export CSV</a></div>
+          </section>
+        </div>
+
+        <aside class="wcol">
+          <section class="dframe o-tr" aria-labelledby="tr-h">
+            <div class="dbanner"><b>DEMO MODE</b><span>· simulated data · no real money</span></div>
+            <form class="tform" id="transfer" method="POST" action="/wallet/transfer" novalidate data-balance-minor="<%= balanceMinor %>" data-max-minor="50000">
+              <h2 class="h3" id="tr-h">Send demo tokens</h2>
+              <p class="tnote">Transfers are simulated between demo wallets. No blockchain and no real funds are involved.</p>
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="idempotency_key" id="idempotency-key" value="<%= idempotencyKey %>">
+              <% if (formError) { %><p class="hint err" role="alert"><%= formError %></p><% } %>
+
+              <div class="fg">
+                <label for="recipient">Recipient</label>
+                <div class="inp has-prefix<%= recipientError ? ' is-error' : '' %><%= recipientOk ? ' is-valid' : '' %>">
+                  <span class="pre mono">@</span>
+                  <input id="recipient" name="recipient" type="text" value="<%= recipient %>" autocomplete="off" aria-describedby="recipient-hint"<% if (recipientError) { %> aria-invalid="true"<% } %>>
+                  <% if (recipientOk) { %><span class="ok-ic" aria-hidden="true">✓</span><% } %>
+                </div>
+                <p class="hint<%= recipientError ? ' err' : '' %><%= recipientOk ? ' ok' : '' %>" id="recipient-hint"<% if (!recipientError) { %> aria-live="polite"<% } %>>
+                  <% if (recipientError) { %><%= recipientError %><% } else if (recipientOk) { %>Gitgram user found: <b>@<%= recipientFound %></b><% } else { %>Gitgram username of the recipient.<% } %>
+                </p>
+              </div>
+
+              <div class="fg">
+                <label for="amount">Amount</label>
+                <div class="inp has-suffix<%= amountError ? ' is-error' : '' %>">
+                  <input id="amount" name="amount" type="text" inputmode="decimal" value="<%= amount %>" aria-describedby="amount-hint"<% if (amountError) { %> aria-invalid="true"<% } %>>
+                  <span class="suf mono">GGT</span>
+                </div>
+                <p class="hint<%= amountError ? ' err' : '' %>" id="amount-hint">
+                  <% if (amountError) { %>⚠ <%= amountError %><% } else { %>Available: <span class="mono"><%= balance %> GGT (demo)</span> · min 0.01 GGT (demo) · max <%= maxTransfer %> GGT (demo) per transfer<% } %>
+                </p>
+              </div>
+
+              <div class="fg">
+                <label for="message">Message <span class="opt">(optional)</span></label>
+                <div class="inp<%= memoError ? ' is-error' : '' %>">
+                  <textarea id="message" name="memo" rows="3" maxlength="140" aria-describedby="message-hint"><%= memo %></textarea>
+                </div>
+                <p class="hint split<%= memoError ? ' err' : '' %>" id="message-hint">
+                  <span><%= memoError ? memoError : 'Visible to the recipient.' %></span>
+                  <span class="mono" id="message-count"><%= memoCount %>/140</span>
+                </p>
+              </div>
+
+              <div class="summary" aria-live="polite">
+                <div><span>You send</span><b class="mono" id="summary-send"><% if (summarySend) { %><%= summarySend %> GGT <span class="dm">(demo)</span><% } else { %>—<% } %></b></div>
+                <div><span>Fee</span><b class="mono">0.00 GGT <span class="dm">(demo)</span></b></div>
+                <div class="tot"><span>Balance after</span><b class="mono" id="summary-after"><% if (summaryAfter) { %><%= summaryAfter %> GGT <span class="dm">(demo)</span><% } else { %>—<% } %></b></div>
+              </div>
+
+              <button class="btn btn-primary btn-lg btn-full<%= blockSubmit ? ' btn-disabled' : '' %>" type="submit" id="send-btn"<% if (blockSubmit) { %> disabled<% } %>>
+                <% if (summarySend) { %>Send <%= summarySend %> GGT <span class="dm-ink">(demo)</span><% } else { %>Send GGT <span class="dm-ink">(demo)</span><% } %>
+              </button>
+              <p class="sim">▲ Simulated transfer · not financial advice · no real money</p>
+            </form>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <% if (flash) { %>
+    <div class="w-toast-dock">
+      <div class="toast" role="status">
+        <span class="t-ic" aria-hidden="true">✓</span>
+        <div>
+          <b>Sent <%= flash.amount %> GGT (demo) to @<%= flash.recipient %></b>
+          <p>Simulated transfer · new balance <%= flash.balance %> GGT (demo)</p>
+          <a class="link" href="#tx-<%= flash.transferId %>">View in history</a>
+        </div>
+        <button type="button" class="t-x" aria-label="Dismiss">×</button>
+      </div>
+    </div>
+  <% } %>
+</div>
+<script src="/js/wallet.js"></script>
+<%- include('partials/footer') %>
