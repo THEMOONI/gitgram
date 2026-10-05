@@ -2,17 +2,22 @@
   "name": "scavvers",
   "version": "1.0.0",
   "description": "Självhostad Git-plattform",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "test": "node --test",
+    "licenses": "node scripts/third-party-notices.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/THEMOONI/gitgram.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Scavvers Labs",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/THEMOONI/gitgram/issues"
@@ -26,5 +31,8 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "moment": "^2.30.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.3.0"
   }
 }
