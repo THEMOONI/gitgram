@@ -50,6 +50,10 @@ Each signed-in user receives a one-time grant of 1,000.00 GGT (demo) from the `g
 
 Open `/wallet` while signed in, or use **Demo Wallet** in the navigation. The usernames `wallet` and `gitgram-faucet` are reserved so the page does not collide with a profile. Request and reset are visible and disabled; they are not implemented.
 
+## Security
+
+Report vulnerabilities privately. The contact address and disclosure timings are in [SECURITY.md](SECURITY.md). The owner still has to fill in the placeholder address.
+
 ## License
 
-GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE).
+GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE). Production dependency licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Regenerate that file with `npm run licenses`.
