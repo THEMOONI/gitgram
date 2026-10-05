@@ -82,9 +82,13 @@ There is no price endpoint and no price-series export. Portfolio values, the equ
 
 ### Risk limits
 
-Orders are rejected before a fill when they break a hard ceiling: 20% of equity per position, 20% per order, 5 open positions, 5 trades per UTC day, a 5% cash buffer, and a mandatory stop-loss no wider than 12%. Profiles may be stricter. They cannot be looser. There is no leverage and no shorting. A kill switch pauses trading at 20% drawdown from peak equity, cancels open buys, and leaves protective stops in place. Only the portfolio owner can resume. An agent key can pause, not resume.
+Orders are rejected before a fill when they break a hard ceiling: 10% of play-money equity per position, 10% per order, 3 open holdings, 5 trades per UTC day, a 5% cash buffer, and a mandatory stop-loss no wider than 12%. Profiles may be stricter. They cannot be looser. Leverage above 1× is refused, and paper fills stay at 1×. There is no shorting. A kill switch pauses new opens at 20% drawdown from peak equity, cancels open buys, and leaves protective stops in place. Only the portfolio owner can resume. An agent key can pause, not resume.
 
-Strategy B in the strategy notes asks for 10 trades a day and a 25% stop. The engine caps that at 5 trades a day and a 12% stop. Strategy C (8% stop, 15% size, 3 positions) is stricter than the ceiling and runs as written.
+Strategy B in the strategy notes asks for 10 trades a day and a 25% stop. The engine caps that at 5 trades a day and a 12% stop. A requested size above 10%, or more than 3 open holdings, is rejected or clamped to those ceilings.
+
+### TIFI paper backtest
+
+`npm run tifi:backtest` runs TIFI 1, TIFI 2 and TIFI 3 on the fictional synthetic feed. It does not read an API key. The default window is 90 daily bars on BTC, ETH and SOL. Override it with `npm run tifi:backtest -- --symbols=BTC,ETH --days=90`. Each tiger prints a simulated return, a max drawdown, and a trade count. Those figures are a paper replay, not a forecast and not a claim of returns.
 
 ### Market data
 

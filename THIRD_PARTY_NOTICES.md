@@ -91,3 +91,4 @@ DevDependencies are omitted. Regenerate this file with `npm run licenses` after 
 ## License review
 
 No GPL, AGPL, LGPL, or unknown license was found in this production tree.
+TIFI's typecheck tools (`typescript` Apache-2.0, `@types/node` MIT) are devDependencies and are not part of this production list.

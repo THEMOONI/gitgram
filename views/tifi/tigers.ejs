@@ -1,0 +1,51 @@
+<%- include('../partials/header') %>
+<%- include('partials/head') %>
+<div class="tifi" data-app="tifi">
+<%- include('partials/banner') %>
+<div class="wrap"><main class="setup">
+<div class="sh">
+  <h1><img src="/tifi/brand/tifi-logo.svg" alt="TIFI">tigrar</h1>
+  <a class="tifi-btn tifi-btn--ghost" href="/tifi">Till tavlan</a>
+</div>
+<div class="note" role="note"><div><b>Pappershandel.</b> En ny mening skapar en simulerad tiger. Inga order skickas till en börs. <%- include('partials/badge', { label: 'AI-tiger' }) %></div></div>
+<% if (formError) { %><p class="tifi-alert err" role="alert"><%= formError %></p><% } %>
+<% if (formOk) { %><p class="tifi-alert ok" role="status"><%= formOk %></p><% } %>
+<h2>Hur ska den här tigern handla?</h2>
+<form method="post" action="/tifi/tigers/parse" class="pw">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="tifi-field">
+    <label class="tifi-label" for="sentence">Mening</label>
+    <textarea class="tifi-textarea" id="sentence" name="sentence" rows="3" required placeholder="t.ex. en snabb tiger som rider på momentum i SOL och kliver av när farten dör"><%= pending && pending.sentence ? pending.sentence : '' %></textarea>
+  </div>
+  <button class="tifi-btn tifi-btn--primary" type="submit">Skapa</button>
+</form>
+<% if (pending && pending.config) { %>
+<div class="res" style="margin-top:16px">
+  <div class="nm"><b><%= pending.config.name %></b><%- include('partials/badge', { label: 'AI-tiger' }) %></div>
+  <div class="tg"><%= pending.config.tagline %></div>
+  <div class="meta"><span class="tifi-chip"><%= pending.config.symbols[0] %></span>kör på <b style="color:var(--tifi-text-1)"><%= pending.config.strategy %></b></div>
+  <div class="rules"><b>Regler</b><%= pending.config.rulesText %></div>
+  <p class="tifi-hint">Ingen hävstång: över 1× avvisas och papperet stannar på 1×. Högst 10 % av lek-kassan per position, högst 3 öppna innehav, och nya öppningar pausas vid 20 % värdeminskning från toppen tills ägaren återställer. <%= notice %></p>
+  <form method="post" action="/tifi/tigers">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="confirm" value="1">
+    <button class="tifi-btn tifi-btn--primary" type="submit">Bekräfta och skapa</button>
+  </form>
+</div>
+<% } %>
+<section class="panel" style="margin-top:18px">
+  <div class="ph"><h2 class="tifi-card__title" style="margin:0">Dina tigrar</h2></div>
+  <% tigers.forEach(function (tiger) { %>
+  <div class="alloc" style="margin-bottom:8px">
+    <span><%= tiger.name %> · <%= tiger.strategy %> · <%= tiger.status %></span>
+    <form method="post" action="/tifi/tigers/<%= tiger.id %>/backtest">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <button class="tifi-btn tifi-btn--secondary" type="submit">Simulera historik</button>
+    </form>
+  </div>
+  <% }) %>
+</section>
+<p class="pg-foot"><%= notice %>. <%= simulatedLabel %>. Inte finansiell rådgivning. Pappershandel med simulerade pengar. Öppen källkod, MIT-licens, ingen garanti.</p>
+</main></div>
+</div>
+<%- include('../partials/footer') %>

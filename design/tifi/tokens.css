@@ -1,0 +1,69 @@
+/* TIFI (Tiger Finance) design tokens v1.0
+   Scope: all tokens live on .tifi / [data-app="tifi"]. No :root, no element resets,
+   so nothing leaks into the rest of Gitgram. Wrap every TIFI page in
+   <div class="tifi"> … </div> or <main data-app="tifi"> … </main>.
+   Fonts are shared with Gitgram "Terminal Volt": Space Grotesk, Inter, JetBrains Mono. */
+.tifi, [data-app="tifi"] {
+  /* Surfaces (black / graphite) */
+  --tifi-bg-0: #07080A;   /* page */
+  --tifi-bg-1: #0E0F12;   /* panels, top bar */
+  --tifi-bg-2: #15171B;   /* cards */
+  --tifi-bg-3: #1D2026;   /* raised rows, inputs hover, tracks */
+  --tifi-line: #2A2D34;   /* borders */
+  --tifi-line-2: #393D46; /* strong borders */
+
+  /* Text (contrast on bg-0 … bg-3) */
+  --tifi-text-1: #F3F1EE; /* 17.8 → 14.5 : 1 */
+  --tifi-text-2: #B9B4AC; /*  9.7 →  7.9 : 1 */
+  --tifi-text-3: #948F87; /*  6.2 →  5.1 : 1  (AA for small text) */
+
+  /* Brand orange */
+  --tifi-orange: #FF7A1A;        /* primary; text on it = --tifi-on-orange (7.5:1) */
+  --tifi-orange-hover: #FF8F3D;  /* 8.7:1 with on-orange */
+  --tifi-orange-press: #E8590C;  /* 5.5:1 with on-orange */
+  --tifi-orange-text: #FF9A4D;   /* orange used AS text on dark (≥7.8:1) */
+  --tifi-orange-soft: rgba(255,122,26,.12);
+  --tifi-orange-line: rgba(255,122,26,.40);
+  --tifi-on-orange: #0B0B0C;     /* NEVER white on orange (2.6:1 fails AA) */
+
+  /* Market + status */
+  --tifi-up: #3DDC97;   --tifi-up-soft: rgba(61,220,151,.12);
+  --tifi-down: #FF5D7A; --tifi-down-soft: rgba(255,93,122,.12);
+  --tifi-flat: #948F87;
+
+  /* AI marker (shared with Gitgram "iris") */
+  --tifi-ai: #9A8CFF; --tifi-ai-soft: rgba(154,140,255,.14); --tifi-ai-line: rgba(154,140,255,.45);
+
+  /* Per-tiger accents */
+  --tifi-t1: #FF7A1A; /* TIFI 1 · utbrott */
+  --tifi-t2: #FFB547; /* TIFI 2 · trend */
+  --tifi-t3: #EDE6DA; /* TIFI 3 · momentum (vit tiger) */
+
+  /* Typography */
+  --tifi-font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --tifi-font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --tifi-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --tifi-fs-xs: 11px; --tifi-fs-sm: 12.5px; --tifi-fs-md: 14px; --tifi-fs-lg: 16px;
+  --tifi-fs-xl: 20px; --tifi-fs-2xl: 28px; --tifi-fs-3xl: 36px;
+
+  /* Spacing (4px grid) */
+  --tifi-space-1: 4px; --tifi-space-2: 8px; --tifi-space-3: 12px; --tifi-space-4: 16px;
+  --tifi-space-5: 20px; --tifi-space-6: 24px; --tifi-space-8: 32px; --tifi-space-10: 40px;
+
+  /* Radii */
+  --tifi-radius-sm: 6px; --tifi-radius: 10px; --tifi-radius-lg: 14px; --tifi-radius-xl: 20px; --tifi-radius-pill: 999px;
+
+  /* Glows & shadows */
+  --tifi-glow-sm: 0 0 0 1px rgba(255,122,26,.35), 0 0 12px rgba(255,122,26,.25);
+  --tifi-glow-md: 0 0 0 1px rgba(255,122,26,.45), 0 0 24px rgba(255,122,26,.30);
+  --tifi-glow-lg: 0 0 40px rgba(255,122,26,.35), 0 0 90px rgba(255,122,26,.15);
+  --tifi-shadow-card: 0 20px 50px -24px rgba(0,0,0,.8);
+  --tifi-focus-ring: 0 0 0 2px #07080A, 0 0 0 4px #FF9A4D;
+
+  /* Demo stripes */
+  --tifi-stripes: repeating-linear-gradient(135deg, #FF7A1A 0 12px, #E8590C 12px 24px);
+
+  font-family: var(--tifi-font-ui);
+  color: var(--tifi-text-1);
+  background: var(--tifi-bg-0);
+}

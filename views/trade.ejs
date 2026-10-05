@@ -42,7 +42,7 @@
           <div class="dbanner"><b>DEMO MODE</b><span>· move demo units into a paper portfolio</span></div>
           <form class="tform" id="open-portfolio" method="POST" action="/trade/open">
             <h2 class="h3" id="open-h">Open a paper portfolio</h2>
-            <p class="tnote">Wallet balance <%= walletBalance %> GGT <span class="dm">(demo)</span>. Allocation is capped at 1,000.00 and stays inside this demo.</p>
+            <p class="tnote">Wallet balance <%= walletBalance %> GGT <span class="dm">(demo)</span>. Allocation is capped at 1,000.00 and stays inside this demo. Each position is at most 10% of play-money equity. At most 3 open holdings. Leverage above 1× is refused; paper stays at 1×. A 20% drawdown from peak equity pauses new opens until the owner resumes.</p>
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="idempotency_key" value="<%= idempotencyKey %>">
             <div class="fg">
@@ -74,6 +74,7 @@
                   <div class="stat"><div class="lbl">Status</div><div class="mono"><%= portfolio.status %></div></div>
                   <div class="stat"><div class="lbl">Parked in wallet custody</div><div class="mono"><%= portfolio.parked %> GGT <span class="dm">(demo)</span></div></div>
                   <div class="stat"><div class="lbl">Max position</div><div class="mono"><%= portfolio.risk.maxPositionPct %>%</div></div>
+                  <div class="stat"><div class="lbl">Max open holdings</div><div class="mono"><%= portfolio.risk.maxOpenPositions %></div></div>
                 </div>
               </div>
               <p class="attr" id="price-attribution">
@@ -136,7 +137,7 @@
               <div class="dbanner"><b>DEMO MODE</b><span>· paper order</span></div>
               <form class="tform" id="place-order" method="POST" action="/trade/orders">
                 <h2 class="h3" id="place-h">Place a paper order</h2>
-                <p class="tnote">Buys require a stop-loss. The engine can tighten the default but will not accept a wider stop. No leverage and no shorting.</p>
+                <p class="tnote">Each position is at most 10% of play-money equity. At most 3 open holdings. Leverage above 1× is refused; paper stays at 1×. A 20% drawdown from peak equity pauses new opens until the owner resumes. Buys require a stop-loss. No shorting.</p>
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <input type="hidden" name="client_order_id" value="<%= orderKey %>">
                 <div class="fg">

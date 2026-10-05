@@ -1,0 +1,110 @@
+<%- include('../partials/header') %>
+<%- include('partials/head') %>
+<% function stratLabel(name) { return name === 'breakout' ? 'Utbrott' : name === 'trend' ? 'Trend' : 'Momentum'; } %>
+<div class="tifi" data-app="tifi">
+<%- include('partials/banner') %>
+<div class="wrap"><main class="setup<%= step === 'design' ? ' wide' : '' %>">
+<div class="sh">
+  <h1><img src="/tifi/brand/tifi-logo.svg" alt="TIFI">uppsättning</h1>
+  <ol class="steps" aria-label="Steg">
+    <li class="<%= step === 'risk' ? 'on' : 'done' %>"<% if (step === 'risk') { %> aria-current="step"<% } %>>Reglerna</li>
+    <li class="<%= step === 'password' ? 'on' : (step === 'design' ? 'done' : '') %>"<% if (step === 'password') { %> aria-current="step"<% } %>>Lösenord</li>
+    <li class="<%= step === 'design' ? 'on' : '' %>"<% if (step === 'design') { %> aria-current="step"<% } %>>Dina tigrar</li>
+    <li>Start</li>
+  </ol>
+</div>
+<div class="note" role="note">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9A4D" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>
+  <div><b>Pappershandel.</b> Tigrarna handlar med simulerade pengar mot riktiga marknadspriser. Simulering – DEMO har inget värde, och inga order skickas till en börs.</div>
+</div>
+<% if (formError) { %><p class="tifi-alert err" role="alert"><%= formError %></p><% } %>
+<% if (formOk) { %><p class="tifi-alert ok" role="status"><%= formOk %></p><% } %>
+
+<% if (step === 'risk') { %>
+<h2>Innan vi börjar</h2>
+<p class="lead">TIFI är ett experiment och öppen källkod, inte en handelsprodukt. Kryssa i alla tre för att fortsätta.</p>
+<form method="post" action="/tifi/setup/risk">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="checks" role="group" aria-label="Riskbekräftelse" data-risk>
+    <label class="tifi-check" for="c1"><input type="checkbox" id="c1" name="c1" value="1"><span><b>Det här är inte finansiell rådgivning.</b> Inget som tigrarna gör, och inget i koden eller i demon, är en rekommendation att köpa eller sälja något.</span></label>
+    <label class="tifi-check" for="c2"><input type="checkbox" id="c2" name="c2" value="1"><span><b>Mina tigrar handlar bara på papper.</b> De använder riktiga marknadspriser och simulerade pengar. DEMO har inget värde och kan inte tas ut eller växlas.</span></label>
+    <label class="tifi-check" for="c3"><input type="checkbox" id="c3" name="c3" value="1"><span><b>Jag använder det på egen risk.</b> Programvaran levereras utan garanti (MIT-licens). Resultat i simuleringen säger ingenting om framtida resultat.</span></label>
+  </div>
+  <div class="act"><span class="tifi-hint" id="h1">0 av 3 ikryssade. Kryssa i alla för att fortsätta.</span><button class="tifi-btn tifi-btn--primary tifi-btn--lg" id="accept" disabled>Jag godkänner</button></div>
+</form>
+<% } else if (step === 'password') { %>
+<h2>Välj ett ägarlösenord</h2>
+<p class="lead">Din dashboard kan vara publik, så allt du ändrar senare (till exempel att pausa en tiger eller nollställa demon) kräver det här lösenordet. Välj ett som bara du känner till, minst 12 tecken. Servern sparar bara en hashad kopia, så skriv ner det. För att återställa det kör du uppsättningen igen.</p>
+<form method="post" action="/tifi/setup/password">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <div class="pw">
+    <div class="tifi-field">
+      <label class="tifi-label" for="pw1">Lösenord</label>
+      <input class="tifi-input" id="pw1" name="password" type="password" minlength="12" autocomplete="new-password" required aria-describedby="pw1h">
+      <div class="meter" id="pw-meter" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <span class="tifi-hint" id="pw1h">Minst 12 tecken.</span>
+    </div>
+    <div class="tifi-field">
+      <label class="tifi-label" for="pw2">Upprepa lösenord</label>
+      <input class="tifi-input" id="pw2" name="password_again" type="password" minlength="12" autocomplete="new-password" required aria-describedby="pw2h">
+      <span class="tifi-hint" id="pw2h"></span>
+    </div>
+  </div>
+  <div class="act">
+    <a class="tifi-btn tifi-btn--secondary tifi-btn--lg" href="/tifi/setup?step=risk">Tillbaka</a>
+    <button class="tifi-btn tifi-btn--primary tifi-btn--lg" id="pw-next" type="submit" disabled>Nästa</button>
+  </div>
+</form>
+<% } else { %>
+<h2>Designa dina tigrar</h2>
+<p class="lead">Tre AI-tigrar handlar på papper sida vid sida och tävlar mot varandra. Beskriv i en mening hur varje tiger ska handla. AI:n gör om det till en tagline, en strategi, regler och vilken coin den får handla, och sedan genererar du ett porträtt. Namnen är fasta: TIFI 1, TIFI 2 och TIFI 3. Varje position är högst 10 % av lek-kassan, högst 3 öppna innehav, ingen hävstång (1×), och en paus vid 20 % värdeminskning från toppen.</p>
+<div class="cols">
+<% drafts.forEach(function (draft) { %>
+<section class="col" style="--acc:var(--tifi-t<%= draft.slot %>)" aria-label="TIFI <%= draft.slot %>">
+  <div class="pic">
+    <img src="<%= draft.confirmed ? '/tifi/portraits/tifi-' + draft.slot + '.png' : '/tifi/portraits/tifi-placeholder.png' %>" alt="<%= draft.confirmed ? 'Genererat porträtt av TIFI ' + draft.slot : 'Platshållare: tigerhuvud i grafit, porträtt ej genererat' %>">
+    <% if (draft.confirmed) { %><span class="done-badge">Porträtt klart</span><% } else { %>
+    <span class="ph"><%= draft.sentence ? 'Inget porträtt än' : 'Väntar på beskrivning' %></span><% } %>
+  </div>
+  <form method="post" action="/tifi/setup/parse">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="slot" value="<%= draft.slot %>">
+    <label class="lbl" for="p<%= draft.slot %>">Hur ska den här tigern handla?</label>
+    <textarea class="tifi-textarea" id="p<%= draft.slot %>" name="sentence" rows="3" placeholder="t.ex. en snabb tiger som rider på momentum i SOL och kliver av när farten dör"><%= draft.sentence %></textarea>
+    <button class="tifi-btn <%= draft.config ? 'tifi-btn--secondary' : 'tifi-btn--primary tifi-btn--lg' %> tifi-btn--block" type="submit"><%= draft.config ? 'Skapa igen' : 'Skapa' %></button>
+  </form>
+  <% if (draft.config) { %>
+  <div class="res">
+    <div class="nm"><b>TIFI <%= draft.slot %></b><%- include('partials/badge', { label: 'AI-tiger' }) %></div>
+    <div class="tg"><%= draft.config.tagline %></div>
+    <div class="meta"><span class="tifi-chip"><%= draft.config.symbols[0] %></span>kör på <b style="color:var(--tifi-text-1)"><%= stratLabel(draft.config.strategy) %></b></div>
+    <div class="rules"><b>Regler</b><%= draft.config.rulesText %></div>
+    <form method="post" action="/tifi/setup/portrait">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="slot" value="<%= draft.slot %>">
+      <button class="tifi-btn <%= draft.confirmed ? 'tifi-btn--secondary' : 'tifi-btn--primary tifi-btn--lg' %> tifi-btn--block" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+        <%= draft.confirmed ? 'Generera porträtt igen' : 'Generera porträtt' %>
+      </button>
+    </form>
+  </div>
+  <% } else { %>
+  <div class="empty-res">Beskriv tigern i en mening och tryck på Skapa. Namnet blir TIFI <%= draft.slot %>.</div>
+  <% } %>
+</section>
+<% }) %>
+</div>
+<div class="act">
+  <span class="tifi-hint">Skapa alla tre tigrar och generera deras porträtt för att fortsätta.</span>
+  <a class="tifi-btn tifi-btn--secondary tifi-btn--lg" href="/tifi/setup?step=password">Tillbaka</a>
+  <form method="post" action="/tifi/setup/finish">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="tifi-btn tifi-btn--primary tifi-btn--lg" type="submit"<%= ready ? '' : ' disabled' %>>Nästa</button>
+  </form>
+</div>
+<% } %>
+<p class="pg-foot"><%= notice %>. <%= simulatedLabel %>. Inte finansiell rådgivning. Öppen källkod, MIT-licens, ingen garanti.</p>
+</main></div>
+</div>
+<script src="/tifi/tifi.js"></script>
+<%- include('../partials/footer') %>
