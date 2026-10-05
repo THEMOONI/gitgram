@@ -17,7 +17,9 @@ const { decideWorldTiger } = require('../lib/tifi/world-decide.ts');
 const { createDecisionModel } = require('../lib/tifi/model.ts');
 const { decideTiger } = require('../lib/tifi/decide.ts');
 const { seedDemo } = require('../lib/tifi/seed.ts');
-const { splitEqual, freeMinor } = require('../lib/tifi/treasury.ts');
+const { splitEqual, freeMinor, createTiger, moveCash } = require('../lib/tifi/treasury.ts');
+const { parseBacktestArgs } = require('../scripts/tifi-backtest');
+const { HARD } = require('../lib/paper/risk');
 const { svMoney, worldPanel } = require('../lib/tifi/board.ts');
 const { marketCopy, displaySeries, publicText } = require('../lib/tifi/labels.ts');
 const { worldAssumptions } = require('../lib/tifi/world-venue.ts');
@@ -382,12 +384,14 @@ test('guard rejects each limit and keeps leverage at 1x', () => {
   const wide = evaluateGuard(ctx({ proposal: proposal({ leverage: 3 }) }));
   assert.equal(wide.verdict, 'reject');
   assert.ok(wide.codes.includes('LEVERAGE'));
+  assert.equal(wide.leverageApplied, 1);
+  assert.equal(wide.order, null);
 
-  const scaled = evaluateGuard(ctx({ proposal: proposal({ leverage: 2 }), limits: limits({ maxLeverage: 2 }) }));
-  assert.equal(scaled.verdict, 'allow');
-  assert.ok(scaled.codes.includes('LEVERAGE_SCALED'));
-  assert.equal(scaled.leverageApplied, 1);
-  assert.equal(scaled.order.notionalPct, 10);
+  const refused = evaluateGuard(ctx({ proposal: proposal({ leverage: 2 }) }));
+  assert.equal(refused.verdict, 'reject');
+  assert.ok(refused.codes.includes('LEVERAGE'));
+  assert.equal(refused.leverageApplied, 1);
+  assert.equal(marginMultiplier(), 1);
 
   const stop = evaluateGuard(ctx({ proposal: proposal({ stopLossPct: 15 }) }));
   assert.equal(stop.verdict, 'reject');
@@ -417,9 +421,15 @@ test('guard rejects each limit and keeps leverage at 1x', () => {
   assert.ok(paused.codes.includes('PAUSED_DAILY'));
 
   assert.ok(validateLimits(limits({ maxTradesPerDay: 8 })).includes('trades'));
-  assert.ok(validateLimits(limits({ maxLeverage: 3 })).includes('leverage'));
-  const clamped = clampLimits({ maxPositionPct: 40, maxStopPct: 30, maxTradesPerDay: 9, symbols: ['BTC'] });
-  assert.equal(clamped.limits.maxPositionPct, 20);
+  assert.ok(validateLimits(limits({ maxLeverage: 2 })).includes('leverage'));
+  assert.ok(validateLimits(limits({ maxPositionPct: 11 })).includes('position'));
+  const halted = evaluateGuard(ctx({ status: 'paused', pauseReason: 'drawdown' }));
+  assert.equal(halted.verdict, 'reject');
+  assert.ok(halted.codes.includes('DRAWDOWN'));
+  assert.equal(halted.order, null);
+  const clamped = clampLimits({ maxPositionPct: 40, maxLeverage: 4, maxStopPct: 30, maxTradesPerDay: 9, symbols: ['BTC'] });
+  assert.equal(clamped.limits.maxPositionPct, 10);
+  assert.equal(clamped.limits.maxLeverage, 1);
   assert.equal(clamped.limits.maxStopPct, 12);
   assert.equal(clamped.limits.maxTradesPerDay, 5);
   assert.ok(clamped.notes.length >= 1);
@@ -438,15 +448,135 @@ test('sentence parser reads Swedish and English and clamps', () => {
   assert.equal(en.ok, true);
   assert.equal(en.config.strategy, 'breakout');
   assert.deepEqual(en.config.symbols, ['BTC']);
-  assert.equal(en.config.maxPositionPct, 15);
+  assert.equal(en.config.maxPositionPct, 10);
   assert.equal(en.config.stopPct, 8);
+  assert.ok(en.notes.some((note) => /position/i.test(note)));
 
-  const loose = parseTigerSentence('A trend tiger that trades ETH with max 40% per position and stop 30%');
+  const trend = parseTigerSentence('en trend tiger som handlar ETH och hellre väntar');
+  assert.equal(trend.ok, true);
+  assert.equal(trend.config.maxPositionPct, 10);
+  assert.equal(trend.config.maxLeverage, 1);
+
+  const loose = parseTigerSentence('A trend tiger that trades ETH with max 40% per position and stop 30% and leverage 3');
   assert.equal(loose.ok, true);
-  assert.equal(loose.config.maxPositionPct, 20);
+  assert.equal(loose.config.maxPositionPct, 10);
   assert.equal(loose.config.stopPct, 12);
+  assert.equal(loose.config.maxLeverage, 1);
   assert.ok(loose.notes.length >= 1);
   assert.equal(parseTigerSentence('hej').ok, false);
+});
+
+test('backtest CLI defaults to BTC ETH SOL and a 90 day window', () => {
+  const parsed = parseBacktestArgs([]);
+  assert.deepEqual(parsed.symbols, ['BTC', 'ETH', 'SOL']);
+  assert.equal(parsed.days, 90);
+  assert.equal(parsed.to, '2026-01-01T00:00:00.000Z');
+  assert.equal(Date.parse(parsed.to) - Date.parse(parsed.from), 89 * 86400000);
+  const custom = parseBacktestArgs(['--symbols=SOL,BNB', '--days=30']);
+  assert.deepEqual(custom.symbols, ['SOL', 'BNB']);
+  assert.equal(custom.days, 30);
+  assert.throws(() => parseBacktestArgs(['--symbols=DOGE']), /BTC, ETH, SOL/);
+});
+
+test('a tiger caps positions at 10 percent and 3 holdings, then halts at a 20 percent drawdown', async () => {
+  assert.equal(HARD.maxPositionPct, 10);
+  assert.equal(HARD.maxOpenPositions, 3);
+  assert.equal(HARD.maxDrawdownPct, 20);
+  const ctx = openDb();
+  try {
+    await seedDemo(ctx.db, { username: 'halt', password: 'tifi-demo', ownerPassword: 'tigerpapper-2026', steps: 0 });
+    const userId = ctx.db.prepare('SELECT id FROM users WHERE username = ?').get('halt').id;
+    const parsed = parseTigerSentence('en momentum-tiger som handlar BTC, ETH, SOL och BNB med max 10 % per position och stopp på 8 %', { name: 'Halt' });
+    assert.equal(parsed.ok, true);
+    assert.ok(parsed.config.maxPositionPct <= 10);
+    assert.equal(parsed.config.maxLeverage, 1);
+    parsed.config.maxTradesPerDay = 5;
+    const tigerId = createTiger(ctx.db, userId, parsed.config, null);
+    const donors = ctx.db.prepare('SELECT id FROM tifi_tigers WHERE user_id = ? AND id != ?').all(userId, tigerId);
+    donors.forEach((row, index) => {
+      moveCash(ctx.db, {
+        userId,
+        fromRef: String(row.id),
+        toRef: String(tigerId),
+        amountMinor: 20000,
+        idempotencyKey: 'halt-move-' + index + '-cash',
+      });
+    });
+    const tiger = ctx.db.prepare('SELECT * FROM tifi_tigers WHERE id = ?').get(tigerId);
+    const profile = ctx.db.prepare(`
+      SELECT r.max_position_pct, r.max_open_positions, r.max_order_value_pct, r.max_drawdown_pct
+      FROM paper_portfolios p
+      JOIN paper_risk_profiles r ON r.id = p.risk_profile_id
+      WHERE p.id = ?
+    `).get(tiger.portfolio_id);
+    assert.ok(profile.max_position_pct <= 10);
+    assert.equal(profile.max_open_positions, 3);
+    assert.ok(profile.max_order_value_pct <= 10);
+    assert.equal(profile.max_drawdown_pct, 20);
+    assert.equal(Number(tiger.max_leverage), 1);
+
+    const quotes = { BTC: 100_000_000n, ETH: 50_000_000n, SOL: 10_000_000n, BNB: 20_000_000n };
+    const feed = {
+      id: 'synthetic',
+      fictional: true,
+      async getLatest(symbols) {
+        const ts = new Date().toISOString();
+        return symbols.map((symbol) => ({ symbol, priceMicro: quotes[symbol] || 1_000_000n, ts, source: 'synthetic' }));
+      },
+    };
+    const actor = { type: 'user', id: 'user:' + userId, userId };
+    const base = { portfolioId: tiger.portfolio_id, actor, feed };
+    await assert.rejects(
+      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'halt-too-big', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 11, stopLossPct: 8 } }),
+      (err) => err.code === 'MAX_ORDER_SIZE',
+    );
+    for (const symbol of ['BTC', 'ETH', 'SOL']) {
+      await engine.placeOrder(ctx.db, {
+        ...base,
+        order: { clientOrderId: 'halt-open-' + symbol, symbol, side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 8 },
+      });
+    }
+    await assert.rejects(
+      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'halt-fourth', symbol: 'BNB', side: 'buy', type: 'market', notionalPct: 8, stopLossPct: 8 } }),
+      (err) => err.code === 'MAX_OPEN_POSITIONS',
+    );
+    quotes.BTC = 1n;
+    quotes.ETH = 1n;
+    quotes.SOL = 1n;
+    await engine.markPortfolio(ctx.db, { portfolioId: tiger.portfolio_id, actor, feed });
+    const paused = engine.readState(ctx.db, tiger.portfolio_id);
+    assert.equal(paused.portfolio.status, 'paused');
+    assert.equal(paused.portfolio.pause_reason, 'drawdown');
+    assert.ok(Number(paused.drawdownBps) >= 2000);
+    await assert.rejects(
+      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'halt-while-paused', symbol: 'BNB', side: 'buy', type: 'market', notionalPct: 5, stopLossPct: 8 } }),
+      (err) => err.code === 'PORTFOLIO_PAUSED',
+    );
+    const decision = await decideTiger(ctx.db, tiger, {
+      series: { BTC: flat(5, 10), ETH: flat(5, 10), SOL: flat(5, 10), BNB: flat(5, 10) },
+      barTs: '2026-03-01T00:00:00.000Z',
+      model: { id: 'fake-local', async propose() { return proposal({ symbol: 'BNB', leverage: 1 }); } },
+      place: async () => { throw new Error('open-while-halted'); },
+      quote: { priceMicro: 1n, ts: '2026-03-01T00:00:00.000Z', source: 'synthetic' },
+    });
+    assert.ok(decision.guard.codes.includes('DRAWDOWN'));
+    assert.equal(decision.guard.order, null);
+    assert.equal(decision.execution, null);
+    engine.resumePortfolio(ctx.db, { portfolioId: tiger.portfolio_id, actor });
+    assert.equal(engine.readState(ctx.db, tiger.portfolio_id).portfolio.status, 'active');
+    const resumed = ctx.db.prepare('SELECT * FROM tifi_tigers WHERE id = ?').get(tigerId);
+    const after = await decideTiger(ctx.db, resumed, {
+      series: { BTC: flat(5, 10), ETH: flat(5, 10), SOL: flat(5, 10), BNB: flat(5, 10) },
+      barTs: '2026-03-02T00:00:00.000Z',
+      model: { id: 'fake-local', async propose() { return proposal({ symbol: 'BNB', action: 'hold' }); } },
+      place: async () => ({ ok: true }),
+      quote: { priceMicro: 1n, ts: '2026-03-02T00:00:00.000Z', source: 'synthetic' },
+    });
+    assert.equal(after.guard.codes.includes('DRAWDOWN'), false);
+    assert.equal(resumed.pause_reason, null);
+  } finally {
+    ctx.close();
+  }
 });
 
 test('breakout, trend and momentum are pure functions of bars', () => {

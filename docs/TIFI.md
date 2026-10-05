@@ -47,7 +47,15 @@ npm run tifi:demo
 
 `/tifi` visar kassan, TIFI 1–3, beslut och en intern topplista i procent. `/bots` pekar om till `/tifi` och kräver samma inloggning. `/tifi/setup` är installningen för ett nytt konto. `/tifi/tigers` skapar en tiger från en mening.
 
-Hävstång lagras med tak 2× men körs på 1×. Pappersboken har ingen marginal. `marginMultiplier()` i `lib/tifi/guard.ts` är utbyggnadspunkten.
+Hävstång över 1× avvisas. Effektiv hävstång på papper är 1×. Pappersboken har ingen marginal, och `marginMultiplier()` i `lib/tifi/guard.ts` stannar på 1.
+
+Varje position är högst 10 % av lek-kassan (portföljvärdet). En tiger får ha högst 3 öppna innehav. Vid 20 % värdeminskning från topp-equity pausar kill switchen nya öppningar tills ägaren återställer portföljen.
+
+```bash
+npm run tifi:backtest -- --symbols=BTC,ETH,SOL --days=90
+```
+
+Kommandot kör TIFI 1, TIFI 2 och TIFI 3 mot den påhittade prisserien, utan API-nyckel. Standard är BTC, ETH och SOL och ungefär 90 dagars staplar. Utskriften är simulerad avkastning, max drawdown och antal affärer per tiger. Det är en pappersreplay, inte en prognos.
 
 ## World-marknader (papper)
 

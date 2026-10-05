@@ -117,6 +117,15 @@ async function decideTiger(db: any, tiger: any, args: {
     status = 'paused';
     pauseReason = 'daily_loss';
   }
+  const bookPaused = state && state.portfolio && state.portfolio.status === 'paused'
+    && state.portfolio.pause_reason === 'drawdown';
+  if (bookPaused) {
+    status = 'paused';
+    pauseReason = 'drawdown';
+  } else if (pauseReason === 'drawdown') {
+    status = 'active';
+    pauseReason = null;
+  }
   db.prepare(`
     UPDATE tifi_tigers
     SET status = ?, pause_reason = ?, day_utc = ?, day_start_equity_micro = ?

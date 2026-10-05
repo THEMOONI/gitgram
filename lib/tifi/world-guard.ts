@@ -70,6 +70,14 @@ function evaluateWorldGuard(ctx: {
       order: null,
     };
   }
+  if (ctx.status === 'paused' && ctx.pauseReason === 'drawdown' && ctx.side === 'buy') {
+    return {
+      verdict: 'reject',
+      reasons: ['Värdeminskningen nådde 20 % från toppen. Nya öppningar är spärrade tills ägaren återställer.'],
+      codes: ['DRAWDOWN'],
+      order: null,
+    };
+  }
   if (ctx.action === 'abstain' || !ctx.outcome || !ctx.side) {
     return {
       verdict: 'allow',

@@ -176,6 +176,11 @@ function ensureTifiSchema(db: any): void {
   if (!columns.some((column: any) => column.name === 'venue')) {
     db.exec(`ALTER TABLE tifi_tigers ADD COLUMN venue TEXT NOT NULL DEFAULT 'world'`);
   }
+  db.prepare(`
+    UPDATE tifi_tigers
+    SET max_position_pct = MIN(max_position_pct, 10),
+        max_leverage = MIN(max_leverage, 1)
+  `).run();
 }
 
 module.exports = { ensureTifiSchema };

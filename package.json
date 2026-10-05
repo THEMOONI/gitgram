@@ -8,7 +8,7 @@
     "test": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node --test",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "tifi:demo": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node scripts/tifi-demo.js",
-    "tifi:backtest": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node scripts/tifi-backtest.js",
+    "tifi:backtest": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node scripts/tifi-backtest.js --symbols=BTC,ETH,SOL --days=90",
     "licenses": "node scripts/third-party-notices.js"
   },
   "engines": {

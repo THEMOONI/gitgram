@@ -23,7 +23,9 @@ function tigerStrategy(row: any): { id: string; version: string; onBar: (ctx: an
       if (signal.action === 'exit') {
         return [{ clientOrderId: id + '-s', symbol: signal.symbol, side: 'sell', type: 'market', sellAll: true }];
       }
-      const notional = Math.min(row.max_position_pct, ctx.risk.maxPositionPct);
+      const openCap = Math.min(3, ctx.risk.maxOpenPositions);
+      if (held.length >= openCap) return [];
+      const notional = Math.min(10, row.max_position_pct, ctx.risk.maxPositionPct);
       const stop = Math.min(row.max_stop_pct, ctx.risk.defaultStopLossPct);
       return [{
         clientOrderId: id + '-b',
@@ -54,10 +56,16 @@ async function runTigerBacktest(db: any, row: any, opts: any): Promise<any> {
   const first = result.equity && result.equity.length ? Number(result.equity[0].equity) : 0;
   const last = result.equity && result.equity.length ? Number(result.equity[result.equity.length - 1].equity) : first;
   const percent = first > 0 ? ((last / first) - 1) * 100 : 0;
+  const maxDrawdown = result.metrics && result.metrics.maxDrawdown != null
+    ? result.metrics.maxDrawdown * 100
+    : 0;
   return {
     simulated: true,
+    paper: true,
     resultLabel: result.resultLabel,
     percent,
+    maxDrawdown,
+    trades: Array.isArray(result.trades) ? result.trades.length : 0,
     runId: result.runId,
   };
 }

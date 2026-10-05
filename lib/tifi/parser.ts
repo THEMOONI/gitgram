@@ -55,12 +55,15 @@ function rulesFor(strategy: string, symbols: string[], stopPct: number, trades: 
     : strategy === 'trend'
       ? 'Gå in först när trenden är tydlig. Stå utanför när den vänder.'
       : 'Följ momentum och kliv av när farten dör.';
-  return 'Handla bara ' + coins + '. ' + how + ' Stopp ' + stopPct + ' %. Max ' + trades + ' trades per dag.';
+  return 'Handla bara ' + coins + '. ' + how
+    + ' Stopp ' + stopPct + ' %. Max ' + trades + ' trades per dag.'
+    + ' Högst 10 % av lek-kassan per position och högst 3 öppna innehav. Ingen hävstång (1×).'
+    + ' Pausa nya öppningar vid 20 % värdeminskning från toppen.';
 }
 
 function defaultsFor(strategy: string): Record<string, number> {
   if (strategy === 'breakout') return { maxTradesPerDay: 2, cooldownSec: 3600, stopPct: 8, maxPositionPct: 10 };
-  if (strategy === 'trend') return { maxTradesPerDay: 2, cooldownSec: 7200, stopPct: 10, maxPositionPct: 12 };
+  if (strategy === 'trend') return { maxTradesPerDay: 2, cooldownSec: 7200, stopPct: 10, maxPositionPct: 10 };
   return { maxTradesPerDay: 3, cooldownSec: 1800, stopPct: 5, maxPositionPct: 10 };
 }
 

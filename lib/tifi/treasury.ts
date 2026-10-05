@@ -27,15 +27,17 @@ function treasuryRisk(): any {
 }
 
 function tigerRisk(config: any): any {
+  const symbols = Array.isArray(config.symbols) ? config.symbols : [];
+  const position = Math.min(10, Math.max(1, Math.round(Number(config.maxPositionPct) || 10)));
   return {
-    maxPositionPct: config.maxPositionPct,
-    maxOpenPositions: Math.min(5, Math.max(1, config.symbols.length)),
-    maxOrderValuePct: config.maxPositionPct,
+    maxPositionPct: position,
+    maxOpenPositions: Math.min(3, Math.max(1, symbols.length || 1)),
+    maxOrderValuePct: position,
     maxTradesPerDay: config.maxTradesPerDay,
     defaultStopLossPct: config.stopPct,
     maxDrawdownPct: 20,
     minCashPct: 5,
-    whitelist: config.symbols,
+    whitelist: symbols,
   };
 }
 

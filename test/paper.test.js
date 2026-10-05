@@ -140,15 +140,19 @@ test('risk rules reject before a fill', async () => {
       engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-size', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 21, stopLossPct: 12 } }),
       (err) => err.code === 'MAX_ORDER_SIZE'
     );
-    await engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-pos-1', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 15, stopLossPct: 12 } });
+    await engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-pos-1', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 8, stopLossPct: 12 } });
     await assert.rejects(
-      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-pos-2', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 } }),
+      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-pos-2', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 4, stopLossPct: 12 } }),
       (err) => err.code === 'MAX_POSITION'
+    );
+    await assert.rejects(
+      engine.placeOrder(ctx.db, { ...base, order: { clientOrderId: 'r-eleven', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 11, stopLossPct: 12 } }),
+      (err) => err.code === 'MAX_ORDER_SIZE'
     );
     const tight = engine.createPortfolio(ctx.db, {
       userId: ctx.userId,
       actor: ctx.actor,
-      risk: { maxOpenPositions: 1, maxPositionPct: 20, maxOrderValuePct: 20, maxTradesPerDay: 5, defaultStopLossPct: 12, maxDrawdownPct: 20, minCashPct: 5 },
+      risk: { maxOpenPositions: 1, maxPositionPct: 10, maxOrderValuePct: 10, maxTradesPerDay: 5, defaultStopLossPct: 12, maxDrawdownPct: 20, minCashPct: 5 },
     });
     engine.allocate(ctx.db, { portfolioId: tight, amountMinor: 25000, idempotencyKey: 'alloc-tight-open', actor: ctx.actor });
     await engine.placeOrder(ctx.db, { ...base, portfolioId: tight, order: { clientOrderId: 'r-open-1', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 } });
@@ -162,11 +166,11 @@ test('risk rules reject before a fill', async () => {
       await engine.placeOrder(ctx.db, {
         ...base,
         portfolioId: daily,
-        order: { clientOrderId: 'r-day-' + i, symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 3, stopLossPct: 12 },
+        order: { clientOrderId: 'r-day-' + i, symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 1, stopLossPct: 12 },
       });
     }
     await assert.rejects(
-      engine.placeOrder(ctx.db, { ...base, portfolioId: daily, order: { clientOrderId: 'r-day-6', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 3, stopLossPct: 12 } }),
+      engine.placeOrder(ctx.db, { ...base, portfolioId: daily, order: { clientOrderId: 'r-day-6', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 1, stopLossPct: 12 } }),
       (err) => err.code === 'DAILY_TRADE_LIMIT'
     );
     await assert.rejects(
@@ -215,29 +219,45 @@ test('risk rules reject before a fill', async () => {
 test('cash buffer rejects a buy that would leave less than 5 percent cash', async () => {
   const ctx = openDb();
   try {
-    const id = await funded(ctx, '1000.00');
-    const symbols = ['BTC', 'ETH', 'SOL', 'BNB'];
-    for (let i = 0; i < symbols.length; i += 1) {
-      await engine.placeOrder(ctx.db, {
-        portfolioId: id,
-        actor: ctx.actor,
-        feed: ctx.feed,
-        order: { clientOrderId: 'buf-' + symbols[i], symbol: symbols[i], side: 'buy', type: 'market', notionalPct: 20, stopLossPct: 12 },
-      });
-    }
+    const id = engine.createPortfolio(ctx.db, {
+      userId: ctx.userId,
+      actor: ctx.actor,
+      risk: {
+        maxOpenPositions: 3,
+        maxPositionPct: 10,
+        maxOrderValuePct: 10,
+        maxTradesPerDay: 5,
+        defaultStopLossPct: 12,
+        maxDrawdownPct: 20,
+        minCashPct: 80,
+      },
+    });
+    const { parseAmountToMinor } = require('../lib/ledger');
+    engine.allocate(ctx.db, {
+      portfolioId: id,
+      amountMinor: parseAmountToMinor('1000.00', { maxMinor: 100000 }).minor,
+      idempotencyKey: 'alloc-buffer-100000',
+      actor: ctx.actor,
+    });
+    await engine.placeOrder(ctx.db, {
+      portfolioId: id,
+      actor: ctx.actor,
+      feed: ctx.feed,
+      order: { clientOrderId: 'buf-btc', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 },
+    });
     await assert.rejects(
       engine.placeOrder(ctx.db, {
         portfolioId: id,
         actor: ctx.actor,
         feed: ctx.feed,
-        order: { clientOrderId: 'buf-xrp', symbol: 'XRP', side: 'buy', type: 'market', notionalPct: 16, stopLossPct: 12 },
+        order: { clientOrderId: 'buf-eth', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 },
       }),
       (err) => err.code === 'CASH_BUFFER'
     );
     const state = engine.readState(ctx.db, id);
     const cash = state.cashMicro;
     const equity = state.equityMicro;
-    assert.ok(cash * 100n >= equity * 5n);
+    assert.ok(cash * 100n >= equity * 80n);
   } finally {
     ctx.close();
   }
@@ -302,11 +322,18 @@ test('kill switch pauses on a gap, cancels open buys, and only the owner resumes
   const ctx = openDb();
   try {
     const id = await funded(ctx, '1000.00');
+    const resting = await engine.placeOrder(ctx.db, {
+      portfolioId: id,
+      actor: ctx.actor,
+      feed: ctx.feed,
+      order: { clientOrderId: 'kill-limit', symbol: 'BNB', side: 'buy', type: 'limit', limitPrice: '1.00', notionalPct: 4, stopLossPct: 12 },
+    });
+    assert.equal(resting.order.status, 'open');
     await engine.placeOrder(ctx.db, {
       portfolioId: id,
       actor: ctx.actor,
       feed: ctx.feed,
-      order: { clientOrderId: 'kill-btc', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 20, stopLossPct: 12 },
+      order: { clientOrderId: 'kill-btc', symbol: 'BTC', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 },
     });
     await engine.placeOrder(ctx.db, {
       portfolioId: id,
@@ -314,14 +341,15 @@ test('kill switch pauses on a gap, cancels open buys, and only the owner resumes
       feed: ctx.feed,
       order: { clientOrderId: 'kill-eth', symbol: 'ETH', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 },
     });
-    const resting = await engine.placeOrder(ctx.db, {
+    await engine.placeOrder(ctx.db, {
       portfolioId: id,
       actor: ctx.actor,
       feed: ctx.feed,
-      order: { clientOrderId: 'kill-limit', symbol: 'ETH', side: 'buy', type: 'limit', limitPrice: '1.00', notionalPct: 4, stopLossPct: 12 },
+      order: { clientOrderId: 'kill-sol', symbol: 'SOL', side: 'buy', type: 'market', notionalPct: 10, stopLossPct: 12 },
     });
-    assert.equal(resting.order.status, 'open');
     ctx.feed.quotes.BTC = 1n;
+    ctx.feed.quotes.ETH = 1n;
+    ctx.feed.quotes.SOL = 9_000_000n;
     await engine.markPortfolio(ctx.db, { portfolioId: id, actor: ctx.actor, feed: ctx.feed });
     const state = engine.readState(ctx.db, id);
     assert.equal(state.portfolio.status, 'paused');
@@ -329,8 +357,8 @@ test('kill switch pauses on a gap, cancels open buys, and only the owner resumes
     const orders = engine.listOrders(ctx.db, id);
     const limit = orders.find((order) => order.client_order_id === 'kill-limit');
     assert.equal(limit.status, 'cancelled');
-    const ethStop = orders.find((order) => order.protective && order.symbol === 'ETH' && order.status === 'open');
-    assert.ok(ethStop, 'ETH protective stop remains');
+    const solStop = orders.find((order) => order.protective && order.symbol === 'SOL' && order.status === 'open');
+    assert.ok(solStop, 'SOL protective stop remains');
     const agent = { type: 'agent', id: 'key:1', userId: ctx.userId, portfolioId: id };
     assert.throws(
       () => engine.resumePortfolio(ctx.db, { portfolioId: id, actor: agent }),
@@ -488,6 +516,9 @@ test('paper API requires auth and CSRF, labels demo results, and blocks an agent
   assert.equal(home.status, 200);
   assert.match(home.text, /DEMO – inga riktiga pengar/);
   assert.match(home.text, /DEMO MODE/);
+  assert.match(home.text, /at most 10% of play-money equity/i);
+  assert.match(home.text, /At most 3 open holdings/);
+  assert.match(home.text, /Leverage above 1× is refused/);
   assert.match(home.text, /Simulerat resultat/);
   const token = csrfFrom(home.text);
   const noCsrf = await agent.post('/api/demo/portfolios').set('Accept', 'application/json').send({ preset: 'hard-default' });

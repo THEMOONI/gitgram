@@ -1,5 +1,5 @@
 // Plain-code guard. Limits may only be stricter than the paper engine ceilings.
-// Leverage: the hard cap is 2. The paper ledger has no margin, so execution stays at 1.
+// Leverage above 1× is refused. The paper ledger has no margin, so execution stays at 1×.
 
 const { HARD } = require('../paper/risk') as {
   HARD: {
@@ -13,7 +13,7 @@ const { HARD } = require('../paper/risk') as {
   };
 };
 
-const HARD_MAX_LEVERAGE = 2;
+const HARD_MAX_LEVERAGE = 1;
 const DEFAULT_LEVERAGE = 1;
 
 interface Limits {
@@ -70,9 +70,7 @@ interface GuardResult {
 }
 
 function marginMultiplier(): number {
-  // Extension point. A future multiplier could scale a paper notional only if the
-  // ledger can show margin without borrowing and without loosening the engine cash check.
-  // Until that design exists, this stays at 1.
+  // Paper books do not borrow. This stays at 1, so effective leverage cannot rise above 1×.
   return 1;
 }
 
@@ -103,7 +101,7 @@ function clampLimits(input: Partial<Limits> & { symbols?: string[] }): { limits:
   const notes: string[] = [];
   let maxLeverage = input.maxLeverage == null ? DEFAULT_LEVERAGE : Number(input.maxLeverage);
   if (maxLeverage > HARD_MAX_LEVERAGE) {
-    notes.push('Hävstångstaket sänktes till 2×.');
+    notes.push('Hävstång över 1× avvisas. Pappershandeln stannar på 1×.');
     maxLeverage = HARD_MAX_LEVERAGE;
   }
   if (!(maxLeverage >= 1)) maxLeverage = DEFAULT_LEVERAGE;
@@ -188,6 +186,15 @@ function evaluateGuard(ctx: GuardContext): GuardResult {
       leverageApplied: applied,
     };
   }
+  if (ctx.status === 'paused' && ctx.pauseReason === 'drawdown' && proposal.action === 'buy') {
+    return {
+      verdict: 'reject',
+      reasons: ['Värdeminskningen nådde 20 % från toppen. Nya öppningar är spärrade tills ägaren återställer.'],
+      codes: ['DRAWDOWN'],
+      order: null,
+      leverageApplied: applied,
+    };
+  }
 
   const loose = validateLimits(ctx.limits);
   if (loose.length) {
@@ -222,14 +229,10 @@ function evaluateGuard(ctx: GuardContext): GuardResult {
     };
   }
 
-  if (proposal.leverage > HARD_MAX_LEVERAGE) {
+  if (proposal.leverage > HARD_MAX_LEVERAGE || proposal.leverage > applied) {
     codes.push('LEVERAGE');
-    reasons.push('Förslaget överstiger det hårda taket 2× och avvisas.');
+    reasons.push('Hävstång över 1× är inte tillåten. Effektiv hävstång på papper är 1×.');
     return { verdict: 'reject', reasons, codes, order: null, leverageApplied: applied };
-  }
-  if (proposal.leverage > applied) {
-    reasons.push('Förslagets hävstång skalades till 1×. Simulerad marginal är inte påslagen (utbyggnadspunkt).');
-    codes.push('LEVERAGE_SCALED');
   }
 
   if (!ctx.limits.symbols.includes(proposal.symbol)) {

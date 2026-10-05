@@ -2,6 +2,7 @@
 // The proposal is logged before any paper fill.
 
 const { asMicro } = require('../paper/money') as { asMicro: (value: any) => bigint };
+const engine = require('../paper/engine');
 const { dailyLossTripped, rollUtcDay } = require('./guard.ts') as {
   dailyLossTripped: (start: bigint | null, equity: bigint, cap: number) => boolean;
   rollUtcDay: (state: any, today: string) => { status: string; pauseReason: string | null; reset: boolean };
@@ -75,6 +76,16 @@ async function decideWorldTiger(db: any, tiger: any, args: {
   if (status === 'active' && dailyLossTripped(dayStart, equity, limits.dailyLossPct)) {
     status = 'paused';
     pauseReason = 'daily_loss';
+  }
+  const book = engine.readState(db, tiger.portfolio_id);
+  const bookPaused = book && book.portfolio && book.portfolio.status === 'paused'
+    && book.portfolio.pause_reason === 'drawdown';
+  if (bookPaused) {
+    status = 'paused';
+    pauseReason = 'drawdown';
+  } else if (pauseReason === 'drawdown') {
+    status = 'active';
+    pauseReason = null;
   }
   db.prepare(`
     UPDATE tifi_tigers

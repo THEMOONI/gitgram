@@ -25,7 +25,7 @@
   <div class="tg"><%= pending.config.tagline %></div>
   <div class="meta"><span class="tifi-chip"><%= pending.config.symbols[0] %></span>kör på <b style="color:var(--tifi-text-1)"><%= pending.config.strategy %></b></div>
   <div class="rules"><b>Regler</b><%= pending.config.rulesText %></div>
-  <p class="tifi-hint">Hävstångstak <%= pending.config.maxLeverage %>×, körs på 1×. <%= notice %></p>
+  <p class="tifi-hint">Ingen hävstång: över 1× avvisas och papperet stannar på 1×. Högst 10 % av lek-kassan per position, högst 3 öppna innehav, och nya öppningar pausas vid 20 % värdeminskning från toppen tills ägaren återställer. <%= notice %></p>
   <form method="post" action="/tifi/tigers">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <input type="hidden" name="confirm" value="1">
