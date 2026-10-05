@@ -78,7 +78,7 @@ curl -sS -X POST http://127.0.0.1:3000/api/team/flags \
   -d '{"title":"MiCA disclosure update","severity":"hög","summary":"A disclosure duty changed.","affectedProjects":["gitgram"],"affectedAgents":["juridik"],"recommendedAction":"Review the public wording.","needsLawyer":true,"sourceUrl":"https://example.com/mica","rooms":["juridik"]}'
 ```
 
-The flags endpoint is disabled until `TEAM_FLAGS_TOKEN` is set. Regenerate third-party notices with `node scripts/check-licenses.js`.
+The flags endpoint is disabled until `TEAM_FLAGS_TOKEN` is set. Regenerate third-party notices with `npm run licenses`. `node scripts/check-licenses.js` still audits the team-dashboard trees for GPL and AGPL.
 
 ## Trading alerts
 
@@ -140,6 +140,10 @@ Follow-ups: changing who can see `#trading`, forwarding alerts, or publishing th
 | `TRADING_MIN_LIQUIDITY_USD` | No | Minimum liquidity for a push notice. Default `10000`. |
 | `TRADING_QUIET_HOURS` | No | Stockholm hours that badge notices without sound, default `0-7`. `off` disables them. |
 
+## Security
+
+Report vulnerabilities privately. The contact address and disclosure timings are in [SECURITY.md](SECURITY.md). The owner still has to fill in the placeholder address.
+
 ## License
 
-GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE). New team dependencies and their transitive licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE). Production dependency licenses, including the team-dashboard packages, are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Regenerate that file with `npm run licenses`.
