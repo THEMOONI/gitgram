@@ -39,6 +39,23 @@ function micSupported(nav) {
   return Boolean(nav && nav.mediaDevices && typeof nav.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined');
 }
 
+function mentionQuery(value, cursor) {
+  const text = String(value || '');
+  const upto = text.slice(0, cursor == null ? text.length : cursor);
+  const match = upto.match(/(^|\s)@([a-z0-9-]*)$/i);
+  return match ? match[2] : null;
+}
+
+function visibleMentions(agents, query) {
+  if (query == null) return [];
+  const needle = String(query).toLowerCase();
+  return (agents || []).filter((agent) => {
+    const slug = String(agent.slug || '').toLowerCase();
+    const name = String(agent.name || '').toLowerCase();
+    return slug.startsWith(needle) || name.startsWith(needle);
+  });
+}
+
 function pushToTalkBlocked(options) {
   if (!options.voiceAvailable || !options.micSupported) return true;
   return !options.acknowledged;
@@ -67,7 +84,7 @@ function renderMessageHtml(message, options = {}) {
         : '')
     : '';
   const speak = options.voiceAvailable && message.authorType === 'agent'
-    ? `<button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/${Number(message.id)}/speak">Play speech</button>`
+    ? `<button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/${Number(message.id)}/speak">Play AI speech</button>`
     : '';
   const badge = escapeHtml(options.aiAgentBadge || 'AI-agent');
   const generatedLabel = escapeHtml(options.aiGeneratedLabel || 'AI-generated');
@@ -147,6 +164,10 @@ function initTeam(doc) {
       });
     log.insertAdjacentHTML('beforeend', html);
     log.scrollTop = log.scrollHeight;
+    if (item.authorType === 'agent') {
+      const live = rootDoc.getElementById('team-ai-live');
+      if (live) live.textContent = `AI-agent ${item.authorName} sent a message.`;
+    }
   }
 
   rootDoc.querySelectorAll('[data-tab]').forEach((button) => {
@@ -173,6 +194,42 @@ function initTeam(doc) {
   if (!bootstrap.voiceAvailable && status && !status.textContent.trim()) notes.unshift('Text only. No speech API key is set, so voice stays off.');
   if (status) status.textContent = notes.filter(Boolean).join(' ');
   if (talk && (!bootstrap.voiceAvailable || !micOk)) talk.disabled = true;
+
+  const messageBody = rootDoc.getElementById('message-body');
+  const mentionList = rootDoc.getElementById('mention-list');
+  const agents = rootDoc.querySelectorAll('#mention-list [data-slug]');
+  function syncMentions() {
+    if (!messageBody || !mentionList) return;
+    const query = mentionQuery(messageBody.value, messageBody.selectionStart);
+    let shown = 0;
+    agents.forEach((item) => {
+      const match = query != null && visibleMentions([{
+        slug: item.dataset.slug,
+        name: item.textContent || '',
+      }], query).length > 0;
+      item.hidden = !match;
+      if (match) shown += 1;
+    });
+    mentionList.hidden = shown === 0;
+  }
+  if (messageBody) {
+    messageBody.addEventListener('input', syncMentions);
+    messageBody.addEventListener('click', syncMentions);
+    messageBody.addEventListener('keyup', syncMentions);
+  }
+  if (mentionList) {
+    mentionList.addEventListener('click', (event) => {
+      const item = event.target.closest('[data-slug]');
+      if (!item || !messageBody) return;
+      const query = mentionQuery(messageBody.value, messageBody.selectionStart);
+      if (query == null) return;
+      const cursor = messageBody.selectionStart;
+      const start = cursor - query.length;
+      messageBody.value = `${messageBody.value.slice(0, start)}${item.dataset.slug} ${messageBody.value.slice(cursor)}`;
+      mentionList.hidden = true;
+      messageBody.focus();
+    });
+  }
 
   const form = rootDoc.getElementById('team-composer');
   const errorBox = rootDoc.getElementById('team-form-error');
@@ -369,6 +426,8 @@ if (typeof module !== 'undefined' && module.exports) {
     voiceNotes,
     micSupported,
     pushToTalkBlocked,
+    mentionQuery,
+    visibleMentions,
     initTeam,
   };
 }

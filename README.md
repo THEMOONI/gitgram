@@ -31,7 +31,17 @@ That runs `node --test`.
 
 Juridik reviews pasted text and `.txt`, `.md`, and `.pdf` uploads. It tags legal areas and can mark a matter as needing a real lawyer. Trading is a paper-trading demo with amber styling. It does not place orders.
 
-Every agent is labeled **AI-agent** on its avatar, in the member list, and on each message. Agent messages are stored with `ai_generated = 1` and shown as **AI-generated**. The first played voice clip in a login session starts with “Du pratar med en AI-agent”.
+Every agent is labeled **AI-agent** on its avatar, in the member list, and on each message. Agent messages are stored with `ai_generated = 1` and shown as **AI-generated**.
+
+## AI transparency
+
+Jarvis and every agent are labelled AI from the first screen: the room opens with that notice, avatars and names in the member list carry an AI-agent badge, @mention suggestions say AI-agent, and a live notice says when an AI-agent sends a message. The voice control is labelled as an AI voice.
+
+The first spoken clip in a login session says exactly: Du pratar med en AI-röst.
+
+Every text-to-speech clip is marked as AI-generated. The response header is `X-AI-Generated: true`. WAV audio stores an `id3 ` chunk, and MP3 audio starts with an ID3v2.3 tag. Both use TXXX frames: `AI-Generated` (`true`), `AI-Provider`, `AI-Model`, and `AI-Generated-At`. Gitgram does not collect identity documents or KYC data.
+
+TODO: replace this ID3 marking with C2PA content credentials or an audio watermark when a permissive implementation is available. The machine-readable marking obligation applies from 2 December 2026.
 
 Every agent system prompt refuses personalized buy or sell advice about real assets. Gitgram does not move real money, submit blockchain transactions, or collect KYC.
 

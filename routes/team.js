@@ -1,7 +1,7 @@
 const express = require('express');
 const { bearerToken, tokensEqual } = require('../lib/team/secret');
 const { validateFlagInput } = require('../lib/team/flags');
-const { voiceNotice, spokenText, discardAudio, retainAudioFile } = require('../lib/team/voice');
+const { voiceNotice, spokenText, discardAudio, retainAudioFile, markGeneratedAudio } = require('../lib/team/voice');
 
 function wantsJson(req) {
   return (req.get('content-type') || '').includes('application/json');
@@ -266,11 +266,17 @@ function mountTeam(app, deps) {
       });
       const spoken = await voice.synthesize(text);
       if (disclose) req.session.voiceDisclosurePlayed = true;
+      const audio = markGeneratedAudio(spoken.audio, spoken.contentType, {
+        provider: voice.name,
+        model: voice.model,
+        generatedAt: new Date().toISOString(),
+      });
       res.set('Content-Type', spoken.contentType);
+      res.set('X-AI-Generated', 'true');
       res.set('X-Gitgram-Ai-Disclosure', disclose ? '1' : '0');
       res.set('X-Content-Type-Options', 'nosniff');
       res.set('Cache-Control', 'private, no-store');
-      return res.send(spoken.audio);
+      return res.send(audio);
     } catch (error) {
       if (error.code === 'VOICE_UNAVAILABLE') {
         return res.status(503).json({ error: 'voice_unavailable', message: voiceNotice(config) });
