@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "tifi:demo": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node scripts/tifi-demo.js",
     "tifi:backtest": "NODE_OPTIONS='--experimental-strip-types --disable-warning=ExperimentalWarning' node scripts/tifi-backtest.js",
-    "licenses": "node scripts/licenses.js"
+    "licenses": "node scripts/third-party-notices.js"
   },
   "engines": {
     "node": ">=22"

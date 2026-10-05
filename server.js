@@ -115,7 +115,7 @@ function createApp(options = {}) {
     next();
   });
 
-  app.use('/', require('./routes/auth')(db));
+  app.use('/', require('./routes/auth')(db, { loginRateLimit: options.loginRateLimit }));
   // Wallet routes are registered before /:owner/:repo so /wallet is never a profile or repository.
   app.use('/', require('./routes/wallet')(db));
   app.use('/', require('./routes/paper')(db, {
