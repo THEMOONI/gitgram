@@ -114,7 +114,7 @@ function createApp(options = {}) {
       ORDER BY r.updated_at DESC
       LIMIT 20
     `).all();
-    res.render('index', { title: 'Scavvers - Your Own Git Platform', repos });
+    res.render('index', { title: 'Scavvers — a small self-hosted Git host', repos });
   });
 
   app.use((req, res) => {

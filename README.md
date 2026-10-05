@@ -1,10 +1,10 @@
 # Scavvers
 
-Scavvers is a small self-hosted Git host. It stores users and repository metadata in SQLite, keeps bare repositories on disk, and serves a web UI plus the Git smart HTTP protocol for push and clone.
+Scavvers is a small, self-hosted, open-source Git platform (MIT, © 2026 Scavvers Labs). It is at an early stage. It runs on Node.js, Express, and SQLite, stores bare repositories on disk, and serves a web UI plus ordinary `git clone` and `git push` over HTTP.
 
 ## Requirements
 
-- Node.js 22 or newer (`better-sqlite3` 13 needs it)
+- Node.js 22+ (`better-sqlite3` 13 needs it)
 - Git on the server `PATH`
 
 ## Run
@@ -15,7 +15,7 @@ export SESSION_SECRET="$(node -e "console.log(require('crypto').randomBytes(32).
 npm start
 ```
 
-The app listens on port 3000 unless `PORT` is set. Open `http://localhost:3000`, create an account, and create a repository. Clone and push with the URL shown on the repository page. Private repositories require the owner's username and password over HTTP Basic auth.
+The app listens on port 3000 unless `PORT` is set. Open `http://localhost:3000`, create an account, and create a repository. Clone and push with the URL shown on the repository page. New repositories are public unless marked private. A private repository is visible to its owner only, and clone and push then require that owner's username and password over HTTP Basic auth.
 
 ## Test
 
