@@ -6,6 +6,7 @@ const path = require('path');
 const { test } = require('node:test');
 const request = require('supertest');
 const { createApp } = require('../server');
+const { collectProductionNotices, licenseFlag } = require('../scripts/third-party-notices');
 const { isValidUsername, isValidRepoName, isValidRef, resolveRepoPath } = require('../lib/validate');
 const { renderSearchResults, debounce, SEARCH_DEBOUNCE_MS, initSearch } = require('../public/js/app');
 
@@ -34,12 +35,19 @@ function gitExec(args, options = {}) {
   });
 }
 
-async function start() {
+function sessionCookie(res) {
+  const list = res.headers['set-cookie'] || [];
+  const raw = list.find((line) => line.startsWith('connect.sid='));
+  return raw ? raw.split(';')[0] : '';
+}
+
+async function start(extra = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitgram-'));
   const app = createApp({
     dbPath: path.join(dir, 'gitgram.db'),
     dataDir: path.join(dir, 'data'),
     sessionSecret: 'test-session-secret-value',
+    loginRateLimit: extra.loginRateLimit,
   });
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, '127.0.0.1', () => resolve(listening));
@@ -359,6 +367,8 @@ test('register, login, create, push, clone, browse, search, and delete still wor
   });
   assert.equal(created.status, 302);
   assert.equal(created.headers.location, '/');
+  assert.notEqual(sessionCookie(created), '');
+  assert.notEqual(sessionCookie(created), sessionCookie(registerPage));
 
   const noToken = await request(ctx.app).post('/register').type('form').send({
     username: 'bobuser',
@@ -386,6 +396,7 @@ test('register, login, create, push, clone, browse, search, and delete still wor
     _csrf: loginToken,
   });
   assert.equal(loggedIn.status, 302);
+  assert.notEqual(sessionCookie(loggedIn), sessionCookie(loginPage));
 
   const newPage = await agent.get('/new');
   const made = await agent.post('/new').redirects(0).type('form').send({
@@ -452,6 +463,51 @@ test('register, login, create, push, clone, browse, search, and delete still wor
   const gone = await agent.get('/alice/demo');
   assert.equal(gone.status, 404);
   assert.match(gone.text, /Page not found/);
+});
+
+test('login rate limit blocks repeated failures', async (t) => {
+  const ctx = await start({ loginRateLimit: { maxFailures: 2, windowMs: 60 * 1000 } });
+  t.after(() => ctx.close());
+  const agent = request.agent(ctx.app);
+  assert.equal((await register(agent, 'alice')).status, 302);
+  const home = await agent.get('/');
+  await agent.post('/logout').redirects(0).type('form').send({
+    _csrf: csrfFrom(home.text),
+  });
+  const loginPage = await agent.get('/login');
+  const token = csrfFrom(loginPage.text);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const failed = await agent.post('/login').type('form').send({
+      username: 'alice',
+      password: 'wrong-password',
+      _csrf: token,
+    });
+    assert.equal(failed.status, 200);
+    assert.match(failed.text, /Invalid credentials/);
+  }
+  const limited = await agent.post('/login').type('form').send({
+    username: 'alice',
+    password: 'testpass123',
+    _csrf: token,
+  });
+  assert.equal(limited.status, 429);
+  assert.match(limited.text, /Too many login attempts/);
+});
+
+test('production third-party notices omit devDependencies and copyleft', () => {
+  const lock = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package-lock.json'), 'utf8'));
+  const notices = collectProductionNotices(lock);
+  const names = new Set(notices.map((entry) => entry.name));
+  assert.ok(names.has('express'));
+  assert.ok(names.has('better-sqlite3'));
+  assert.equal(names.has('supertest'), false);
+  assert.ok(notices.every((entry) => entry.version && entry.license));
+  const flagged = notices.filter((entry) => licenseFlag(entry.license));
+  assert.deepEqual(flagged, []);
+  const published = fs.readFileSync(path.join(__dirname, '..', 'THIRD_PARTY_NOTICES.md'), 'utf8');
+  assert.match(published, /\| express \|/);
+  assert.doesNotMatch(published, /supertest/);
+  assert.match(published, /No GPL, AGPL, LGPL, or unknown license/);
 });
 
 test('search escapes names that bypass creation checks', async (t) => {

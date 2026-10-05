@@ -111,6 +111,10 @@ History is fetched for a backtest and cached at most 24 hours. A disk cache is w
 
 This feature adds no runtime or test dependency. Crypto uses `node:crypto`. Existing packages stay as they are: `bcryptjs` (BSD-3-Clause), `better-sqlite3`, `compression`, `express`, `express-session`, `moment`, and `supertest` (MIT), and `ejs` (Apache-2.0). None of those is GPL or AGPL. A test fails if a broker or exchange SDK is added to `package.json`.
 
+## Security
+
+Report vulnerabilities privately. The contact address and disclosure timings are in [SECURITY.md](SECURITY.md). The owner still has to fill in the placeholder address.
+
 ## License
 
-GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE).
+GITGRAM is released under the MIT License. Copyright (c) 2026 Scavvers Labs. See [LICENSE](LICENSE). Production dependency licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Regenerate that file with `npm run licenses`.
