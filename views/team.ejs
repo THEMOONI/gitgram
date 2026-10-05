@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="/css/team.css">
 <link rel="stylesheet" href="/css/ai-markning.css">
 <% const sevClass = { 'hög': 'high', 'medel': 'medium', 'låg': 'low' }; %>
+<% const riskClass = { 'LÅG': 'lag', 'MEDEL': 'medel', 'HÖG': 'hog', 'EXTREM': 'extrem' }; %>
 <% const aiOrg = 'Scavvers Labs'; %>
 <% const aiAgentMembers = members.filter(function(member) { return member.type === 'agent'; }); %>
 <% const aiNameList = aiAgentMembers.length < 2 ? (aiAgentMembers[0] ? aiAgentMembers[0].name : 'AI-agent') : aiAgentMembers.slice(0, -1).map(function(member) { return member.name; }).join(', ') + ' och ' + aiAgentMembers[aiAgentMembers.length - 1].name; %>
@@ -75,6 +76,18 @@
     <div class="team-chat-bar">
       <h2>Chat</h2>
       <form class="team-filters" method="get" action="/team/<%= room.slug %>">
+        <% if (isTrading) { %>
+        <div>
+          <label for="filter-risk">Severity</label>
+          <select id="filter-risk" name="risk">
+            <option value=""<%= filters.risk === '' ? ' selected' : '' %>>All</option>
+            <option value="LÅG"<%= filters.risk === 'LÅG' ? ' selected' : '' %>>LÅG</option>
+            <option value="MEDEL"<%= filters.risk === 'MEDEL' ? ' selected' : '' %>>MEDEL</option>
+            <option value="HÖG"<%= filters.risk === 'HÖG' ? ' selected' : '' %>>HÖG</option>
+            <option value="EXTREM"<%= filters.risk === 'EXTREM' ? ' selected' : '' %>>EXTREM</option>
+          </select>
+        </div>
+        <% } else { %>
         <div>
           <label for="filter-severity">Severity</label>
           <select id="filter-severity" name="severity">
@@ -88,6 +101,7 @@
           <label for="filter-project">Project</label>
           <input id="filter-project" name="project" value="<%= filters.project %>" maxlength="60">
         </div>
+        <% } %>
         <div>
           <label for="filter-ack">Acknowledged</label>
           <select id="filter-ack" name="ack">
@@ -99,12 +113,58 @@
         <button type="submit" class="tbtn tbtn-secondary">Filter</button>
       </form>
     </div>
+    <% if (isTrading) { %>
+      <div class="team-trading-head" id="trading-channel-disclaimer">
+        <p class="team-demo-banner"><%= tradingDemoLabel %></p>
+        <p class="team-demo-banner"><%= tradingDisclaimer %></p>
+        <% if (watcherOffline) { %>
+          <p class="team-watcher-status" id="trading-watcher-status"><%= tradingWatcherOffline %></p>
+        <% } %>
+      </div>
+    <% } %>
     <div class="team-log" id="team-log" role="log" aria-live="polite" aria-relevant="additions">
+      <% if (isTrading && tradingNotices && tradingNotices.digest) { %>
+        <p class="team-trading-notice<%= tradingNotices.digestSound ? '' : ' is-quiet' %>" id="trading-digest" data-sound="<%= tradingNotices.digestSound ? '1' : '0' %>"><%= tradingNotices.digest %> <%= tradingNoticeDisclaimer %></p>
+      <% } %>
+      <% if (isTrading && tradingNotices) { tradingNotices.items.forEach(function(notice) { %>
+        <p class="team-trading-notice<%= notice.sound ? '' : ' is-quiet' %>" data-sound="<%= notice.sound ? '1' : '0' %>"><%= notice.text %></p>
+      <% }) } %>
       <% if (!items.length) { %>
-        <p class="team-empty" id="team-empty">No messages yet. Mention @dev, @juridik or @trading.</p>
+        <p class="team-empty" id="team-empty"><%= isTrading ? 'No alerts yet.' : 'No messages yet. Mention @dev, @juridik or @trading.' %></p>
       <% } %>
       <% items.forEach(function(item) { %>
-        <% if (item.kind === 'flag') { %>
+        <% if (item.kind === 'trading_alert') { %>
+          <article class="team-trading-card" id="trading-alert-<%= item.id %>" data-external-id="<%= item.externalId %>" data-mint="<%= item.mint %>" data-stage="<%= item.stage %>" data-label="<%= item.label %>">
+            <p class="team-demo-banner"><%= item.demoLabel %></p>
+            <header class="team-msg-head">
+              <span class="team-risk-badge <%= riskClass[item.label] || 'unknown' %>"><%= item.label %></span>
+              <span class="team-score">Risk score <%= item.score %></span>
+              <% if (item.symbol) { %><span class="team-author"><%= item.symbol %></span><% } %>
+              <% if (item.name) { %><span><%= item.name %></span><% } %>
+              <time datetime="<%= item.createdAt %>"><%= item.displayTime %></time>
+            </header>
+            <p class="team-body"><%= item.summary %></p>
+            <% if (item.reasons.length) { %>
+              <ul class="team-risks">
+                <% item.reasons.forEach(function(reason) { %><li><%= reason %></li><% }) %>
+              </ul>
+            <% } %>
+            <p class="team-source">Source <span><%= item.source %></span></p>
+            <% if (item.safeUrl) { %>
+              <p><a href="<%= item.safeUrl %>" rel="noopener noreferrer" target="_blank">DEX Screener</a></p>
+            <% } %>
+            <p class="team-demo-banner"><%= item.disclaimer %></p>
+            <ul class="team-acks">
+              <% item.acknowledgements.forEach(function(ack) { %>
+                <li>Acknowledged by <%= ack.username %> at <time datetime="<%= ack.createdAt %>"><%= ack.displayTime %></time></li>
+              <% }) %>
+            </ul>
+            <form method="post" action="/api/team/trading-alerts/<%= item.id %>/ack">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="tbtn tbtn-secondary">Acknowledge</button>
+            </form>
+          </article>
+        <% } else if (item.kind === 'flag') { %>
           <article class="team-flag sev-<%= sevClass[item.severity] || 'unknown' %>" id="flag-<%= item.id %>">
             <p class="team-flag-kicker"><%= item.kindLabel %></p>
             <h3><%= item.title %></h3>

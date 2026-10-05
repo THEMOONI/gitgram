@@ -13,6 +13,7 @@ const { createTeamService } = require('./lib/team/service');
 const { createHub, attachTeamRealtime } = require('./lib/team/realtime');
 const { createRateLimiter } = require('./lib/team/ratelimit');
 const { createVoiceProvider, voiceRetentionEnabled } = require('./lib/team/voice');
+const { createWatcherClient, watcherOrigin } = require('./lib/team/trading/watcher');
 const mountTeam = require('./routes/team');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
@@ -84,13 +85,65 @@ function createApp(options = {}) {
     windowMs: options.flagRateLimit?.windowMs || 60_000,
     max: options.flagRateLimit?.max || teamConfig.flagRateLimit,
   });
+  const tradingLimiter = createRateLimiter({
+    windowMs: options.tradingRateLimit?.windowMs || 60_000,
+    max: options.tradingRateLimit?.max || teamConfig.tradingAlertRateLimit || 10,
+  });
+  const tradingAlertsToken = options.tradingAlertsToken !== undefined
+    ? options.tradingAlertsToken
+    : (process.env.TRADING_ALERTS_TOKEN || '');
+  const tradingWatcherUrl = options.tradingWatcherUrl !== undefined
+    ? options.tradingWatcherUrl
+    : (process.env.TRADING_WATCHER_URL || '');
+  const tradingExcludeFile = options.tradingExcludeFile !== undefined
+    ? options.tradingExcludeFile
+    : (process.env.TRADING_EXCLUDE_FILE || '');
+  const ownerUsername = options.ownerUsername !== undefined
+    ? options.ownerUsername
+    : (process.env.TEAM_OWNER_USERNAME || '');
+  const minLiquidityUsd = options.tradingMinLiquidity !== undefined
+    ? Number(options.tradingMinLiquidity)
+    : Number(process.env.TRADING_MIN_LIQUIDITY_USD || teamConfig.tradingMinLiquidityUsd || 10000);
+  const quietHours = options.tradingQuietHours !== undefined
+    ? options.tradingQuietHours
+    : (process.env.TRADING_QUIET_HOURS || '0-7');
+  const origin = watcherOrigin(tradingWatcherUrl);
+  if (tradingWatcherUrl && !origin) {
+    console.warn('TRADING_WATCHER_URL is invalid. Trading pull stays off.');
+  }
+  const watcherState = {
+    configured: Boolean(origin),
+    pumpportalConnected: null,
+    lastEventMs: 0,
+    streamConnected: false,
+  };
   const hub = createHub();
   const teamService = createTeamService(db, {
     config: teamConfig,
     dataDir,
     maxHops,
     hub,
+    ownerUsername,
+    excludeFile: tradingExcludeFile,
+    minLiquidityUsd,
+    tradingLimiter,
+    now: options.tradingNow,
+    quietHours,
+    watcherState,
   });
+  let tradingWatcher = null;
+  if (origin) {
+    tradingWatcher = createWatcherClient({
+      origin,
+      sinceMs: teamService.trading.latestTs(),
+      onAlert: (payload) => teamService.trading.ingest(payload),
+      onStats: (stats) => teamService.trading.noteStats(stats),
+      onStream: (connected) => teamService.trading.noteStream(connected),
+      baseDelayMs: options.tradingReconnect?.baseDelayMs,
+      maxDelayMs: options.tradingReconnect?.maxDelayMs,
+      statsIntervalMs: options.tradingReconnect?.statsIntervalMs,
+    });
+  }
 
   const app = express();
   const port = process.env.PORT || 3000;
@@ -111,6 +164,11 @@ function createApp(options = {}) {
   app.locals.dataDir = dataDir;
   app.locals.teamHub = hub;
   app.locals.teamService = teamService;
+  app.locals.watcherState = watcherState;
+  app.locals.tradingWatcher = tradingWatcher;
+  app.locals.stopTradingWatcher = () => {
+    if (tradingWatcher) tradingWatcher.stop();
+  };
   app.locals.teamMessageLimiter = messageLimiter;
   app.locals.voice = voice;
   app.locals.retainVoiceAudio = retainVoiceAudio;
@@ -153,6 +211,8 @@ function createApp(options = {}) {
     flagsToken,
     messageLimiter,
     flagLimiter,
+    tradingAlertsToken,
+    tradingLimiter,
   });
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));

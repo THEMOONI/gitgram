@@ -17,5 +17,11 @@
   "voiceCloudNotice": "Push-to-talk sends audio to a cloud speech provider for transcription.",
   "voiceLocalNotice": "This server transcribes audio locally. When a cloud speech provider is configured, push-to-talk sends audio to that provider.",
   "voiceRetentionNotice": "Voice recording is off by default. Audio is transcribed in memory and the raw recording is discarded.",
-  "voiceRetentionOnNotice": "Voice retention is enabled. Raw audio is stored on this server."
+  "voiceRetentionOnNotice": "Voice retention is enabled. Raw audio is stored on this server.",
+  "tradingAlertRateLimit": 10,
+  "tradingMinLiquidityUsd": 10000,
+  "tradingDemoLabel": "DEMO / informational only, not financial advice / no promised returns",
+  "tradingDisclaimer": "Endast analys – ingen handel utförs. Inte finansiell rådgivning. Automatiserad AI-/mjukvaruanalys, inte investeringsrådgivning. Signalerna får inte publiceras som tips.",
+  "tradingNoticeDisclaimer": "Endast analys, inte finansiell rådgivning.",
+  "tradingWatcherOffline": "Bevakaren är inte ansluten"
 }

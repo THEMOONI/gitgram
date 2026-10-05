@@ -3,7 +3,7 @@
   "channels": [
     { "slug": "general", "name": "general" },
     { "slug": "juridik", "name": "juridik" },
-    { "slug": "trading", "name": "trading" }
+    { "slug": "trading", "name": "trading", "audience": "owner" }
   ],
   "agents": [
     {

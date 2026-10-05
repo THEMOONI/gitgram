@@ -9,6 +9,7 @@ function wantsJson(req) {
 
 function parseFilters(query) {
   const severity = ['hög', 'medel', 'låg'].includes(query.severity) ? query.severity : '';
+  const risk = ['LÅG', 'MEDEL', 'HÖG', 'EXTREM'].includes(query.risk) ? query.risk : '';
   const ack = ['open', 'done'].includes(query.ack) ? query.ack : 'all';
   const project = typeof query.project === 'string'
     ? query.project.replace(/[\u0000-\u001F]/g, '').trim().slice(0, 60)
@@ -16,7 +17,7 @@ function parseFilters(query) {
   const room = typeof query.room === 'string' && /^[a-z0-9][a-z0-9-]{0,38}$/.test(query.room)
     ? query.room
     : '';
-  return { severity, ack, project, room };
+  return { severity, risk, ack, project, room };
 }
 
 function safeBack(req, slug) {
@@ -46,7 +47,10 @@ function fileFromBody(body) {
 }
 
 function mountTeam(app, deps) {
-  const { service, voice, config, flagsToken, messageLimiter, flagLimiter, dataDir, retainVoiceAudio } = deps;
+  const {
+    service, voice, config, flagsToken, messageLimiter, flagLimiter, dataDir, retainVoiceAudio,
+    tradingAlertsToken, tradingLimiter,
+  } = deps;
   const pages = express.Router();
   const api = express.Router();
 
@@ -110,9 +114,22 @@ function mountTeam(app, deps) {
       aiGeneratedLabel: config.aiGeneratedLabel,
       retainVoiceAudio: Boolean(retainVoiceAudio),
       pageError: errors[errorCode] || '',
+      isTrading: access.room.visibility === 'owner',
+      tradingDemoLabel: config.tradingDemoLabel,
+      tradingDisclaimer: config.tradingDisclaimer,
+      tradingNoticeDisclaimer: config.tradingNoticeDisclaimer,
+      tradingWatcherOffline: config.tradingWatcherOffline,
+      tradingNotices: timeline.notices,
+      watcherOffline: timeline.watcherOffline,
       bootstrap: {
         room: access.room.slug,
         csrfToken: res.locals.csrfToken,
+        filters,
+        trading: access.room.visibility === 'owner',
+        ...(access.room.visibility === 'owner' ? {
+          tradingNoticeDisclaimer: config.tradingNoticeDisclaimer,
+          ...(service.trading.pullEnabled() ? { tradingWatcherOffline: config.tradingWatcherOffline } : {}),
+        } : {}),
         voiceAvailable: voice.available,
         sendsAudioToCloud: Boolean(voice.sendsAudioToCloud),
         voiceCloudNotice: config.voiceCloudNotice,
@@ -148,6 +165,39 @@ function mountTeam(app, deps) {
     }
     return true;
   }
+
+  function alertsOn() {
+    return typeof tradingAlertsToken === 'string' && tradingAlertsToken.length > 0;
+  }
+
+  api.post('/trading-alerts', (req, res) => {
+    if (!alertsOn()) return res.status(404).json({ error: 'not_found' });
+    const ip = req.ip || req.socket?.remoteAddress || 'local';
+    if (tradingLimiter && !tradingLimiter.allow(`post:${ip}`)) {
+      return res.status(429).json({ error: 'rate_limit' });
+    }
+    const provided = bearerToken(req.get('authorization'));
+    if (!provided || !tokensEqual(provided, tradingAlertsToken)) {
+      return res.status(401).json({ error: 'unauthorized' });
+    }
+    if (!tradingLimiter || !tradingLimiter.allow('trading-alerts')) {
+      return res.status(429).json({ error: 'rate_limit' });
+    }
+    const result = service.trading.ingest(req.body, { skipLimit: true });
+    if (!result.ok) return res.status(result.status).json({ error: result.error });
+    if (result.ignored) return res.status(200).json({ ignored: result.ignored });
+    if (result.deduped) return res.status(200).json({ deduped: true, alert: result.alert });
+    return res.status(201).json({ alert: result.alert });
+  });
+
+  api.post('/trading-alerts/:id/ack', (req, res) => {
+    if (req.get('authorization')) return res.status(400).json({ error: 'invalid' });
+    if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
+    const result = service.trading.acknowledge(req.session.userId, Number(req.params.id));
+    if (!result.ok) return res.status(result.status).json({ error: result.error });
+    if (wantsJson(req)) return res.json({ alert: result.alert });
+    return res.redirect(safeBack(req, result.roomSlug));
+  });
 
   api.post('/flags', (req, res) => {
     if (!requireFlagToken(req, res)) return;

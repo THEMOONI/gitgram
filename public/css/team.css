@@ -166,6 +166,29 @@
 .team-files { margin-top: 8px; color: var(--tx-2); }
 .team-file-name { font-family: var(--font-mono); color: var(--tx-1); }
 .team-preview { display: block; color: var(--tx-3); }
+.team-trading-head { display: grid; gap: 8px; }
+.team-trading-card {
+  border: 1px solid rgba(255, 181, 71, 0.7);
+  background: rgba(255, 181, 71, 0.06);
+  border-radius: 10px;
+  padding: 12px;
+}
+.team-risk-badge, .team-score, .team-source span {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.team-risk-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+}
+.team-risk-badge.lag { color: var(--up); }
+.team-risk-badge.medel { color: var(--demo); }
+.team-risk-badge.hog { color: #FF8A3D; }
+.team-risk-badge.extrem { color: var(--down); }
+.team-source, .team-watcher-status, .team-trading-notice { margin: 8px 0 0; color: var(--tx-2); }
+.team-watcher-status, .team-trading-notice { font-family: var(--font-mono); font-size: 13px; }
+.team-trading-notice.is-quiet { color: var(--tx-3); }
 .team-flag { border-color: var(--line-2); }
 .team-flag.sev-high { box-shadow: inset 3px 0 0 var(--down); }
 .team-flag.sev-medium { box-shadow: inset 3px 0 0 var(--demo); }
