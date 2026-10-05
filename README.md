@@ -31,7 +31,21 @@ That runs `node --test`.
 
 Juridik reviews pasted text and `.txt`, `.md`, and `.pdf` uploads. It tags legal areas and can mark a matter as needing a real lawyer. Trading is a paper-trading demo with amber styling. It does not place orders.
 
-Every agent is labeled **AI-agent** on its avatar, in the member list, and on each message. Agent messages are stored with `ai_generated = 1` and shown as **AI-generated**. The first played voice clip in a login session starts with “Du pratar med en AI-agent”.
+Every agent is labeled **AI-agent** on its avatar, in the member list, in @mention suggestions, and on each message. Agent messages are stored with `ai_generated = 1`. Internal team chat does not add a publication label.
+
+## AI transparency
+
+The team room uses the scoped stylesheet `public/css/ai-markning.css` (`--ai-*` tokens, classes under `.ai-mark`). No global stylesheet is changed.
+
+At the start of every browser session, `.ai-first` (`role="alertdialog"`) says "Du interagerar med en AI-agent" and names each agent. It stays until the user chooses "Jag förstår". Escape and clicks outside do not dismiss it. After that, `.ai-persistent` stays visible for the session. Avatars use `.ai-avatar` with the text mark "AI", and names use `.ai-badge` with the accessible name "Det här är en AI-agent".
+
+Before each voice call, `.ai-voice` shows the notice and the script. During the call, `.ai-voice-live` and `.ai-voice-banner` stay visible. The first spoken clip in a login session says exactly: Du pratar med en AI-röst.
+
+`.ai-content` is for published AI text, images, or deepfakes. Pure internal team chat does not show that publication label.
+
+Every text-to-speech clip is marked as AI-generated. The response header is `X-AI-Generated: true`. WAV audio stores an `id3 ` chunk, and MP3 audio starts with an ID3v2.3 tag. Both use TXXX frames: `AI-Generated` (`true`), `AI-Provider`, `AI-Model`, and `AI-Generated-At`. Gitgram does not collect identity documents or KYC data.
+
+TODO: replace this ID3 marking with C2PA content credentials or an audio watermark when a permissive implementation is available. The machine-readable marking obligation applies from 2 December 2026.
 
 Every agent system prompt refuses personalized buy or sell advice about real assets. Gitgram does not move real money, submit blockchain transactions, or collect KYC.
 

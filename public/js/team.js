@@ -47,6 +47,23 @@ function micSupported(nav) {
   return Boolean(nav && nav.mediaDevices && typeof nav.mediaDevices.getUserMedia === 'function' && typeof MediaRecorder !== 'undefined');
 }
 
+function mentionQuery(value, cursor) {
+  const text = String(value || '');
+  const upto = text.slice(0, cursor == null ? text.length : cursor);
+  const match = upto.match(/(^|\s)@([a-z0-9-]*)$/i);
+  return match ? match[2] : null;
+}
+
+function visibleMentions(agents, query) {
+  if (query == null) return [];
+  const needle = String(query).toLowerCase();
+  return (agents || []).filter((agent) => {
+    const slug = String(agent.slug || '').toLowerCase();
+    const name = String(agent.name || '').toLowerCase();
+    return slug.startsWith(needle) || name.startsWith(needle);
+  });
+}
+
 function pushToTalkBlocked(options) {
   if (!options.voiceAvailable || !options.micSupported) return true;
   return !options.acknowledged;
@@ -75,16 +92,16 @@ function renderMessageHtml(message, options = {}) {
         : '')
     : '';
   const speak = options.voiceAvailable && message.authorType === 'agent'
-    ? `<button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/${Number(message.id)}/speak">Play speech</button>`
+    ? `<button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/${Number(message.id)}/speak" data-agent-name="${escapeHtml(message.authorName)}">Play AI speech</button>`
     : '';
-  const badge = escapeHtml(options.aiAgentBadge || 'AI-agent');
-  const generatedLabel = escapeHtml(options.aiGeneratedLabel || 'AI-generated');
-  const generated = message.aiGenerated || message.authorType === 'agent';
+  const initial = escapeHtml(String(message.authorName || '?').charAt(0).toUpperCase());
+  const agentMark = message.authorType === 'agent'
+    ? `<span class="ai-avatar" aria-label="${escapeHtml(message.authorName)}, AI-agent"><span class="ai-avatar__fallback" aria-hidden="true">${initial}</span><span class="ai-avatar__mark" aria-hidden="true">AI</span><span class="ai-sr-only">AI-agent</span></span><span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent">AI-agent</span>`
+    : '';
   return `<article class="team-msg is-${panel}" id="message-${Number(message.id)}">
     <header class="team-msg-head">
+      ${agentMark}
       <span class="team-author">${escapeHtml(message.authorName)}</span>
-      ${message.authorType === 'agent' ? `<span class="team-ai-tag">${badge}</span>` : ''}
-      ${generated ? `<span class="team-generated">${generatedLabel}</span>` : ''}
       <time datetime="${escapeHtml(message.createdAt)}">${escapeHtml(message.displayTime || '')}</time>
     </header>
     ${panel === 'demo' ? disclaimer : ''}
@@ -283,13 +300,13 @@ function initTeam(doc) {
     if (item.kind === 'flag' ? !remember(`flag-${item.id}`) : !remember(`message-${item.id}`)) return;
     const html = item.kind === 'flag'
       ? renderFlagHtml(item, { csrfToken: bootstrap.csrfToken })
-      : renderMessageHtml(item, {
-        voiceAvailable: bootstrap.voiceAvailable,
-        aiAgentBadge: bootstrap.aiAgentBadge,
-        aiGeneratedLabel: bootstrap.aiGeneratedLabel,
-      });
+      : renderMessageHtml(item, { voiceAvailable: bootstrap.voiceAvailable });
     log.insertAdjacentHTML('beforeend', html);
     log.scrollTop = log.scrollHeight;
+    if (item.authorType === 'agent') {
+      const live = rootDoc.getElementById('team-ai-live');
+      if (live) live.textContent = `AI-agent ${item.authorName}. Det här är en AI-agent.`;
+    }
   }
 
   rootDoc.querySelectorAll('[data-tab]').forEach((button) => {
@@ -302,6 +319,53 @@ function initTeam(doc) {
       });
     });
   });
+
+  const storage = rootDoc.defaultView && rootDoc.defaultView.sessionStorage;
+  const overlay = rootDoc.getElementById('ai-first-overlay');
+  const persistent = rootDoc.getElementById('ai-persistent');
+  const firstAck = rootDoc.getElementById('ai-first-ack');
+  function focusable(dialog) {
+    return [...dialog.querySelectorAll('a[href], button, input, textarea, select')].filter((el) => !el.disabled);
+  }
+  function trapDialog(dialog) {
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const list = focusable(dialog);
+      if (!list.length) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (event.shiftKey && rootDoc.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && rootDoc.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    const list = focusable(dialog);
+    if (list[0]) list[0].focus();
+  }
+  if (overlay && storage && storage.getItem('gitgram-ai-first') === '1') {
+    overlay.hidden = true;
+    if (persistent) persistent.hidden = false;
+  } else if (overlay) {
+    trapDialog(overlay);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) event.stopPropagation();
+    });
+  }
+  if (firstAck) {
+    firstAck.addEventListener('click', () => {
+      if (storage) storage.setItem('gitgram-ai-first', '1');
+      if (overlay) overlay.hidden = true;
+      if (persistent) persistent.hidden = false;
+    });
+  }
 
   const status = rootDoc.getElementById('voice-status');
   const talk = rootDoc.getElementById('push-to-talk');
@@ -316,6 +380,42 @@ function initTeam(doc) {
   if (!bootstrap.voiceAvailable && status && !status.textContent.trim()) notes.unshift('Text only. No speech API key is set, so voice stays off.');
   if (status) status.textContent = notes.filter(Boolean).join(' ');
   if (talk && (!bootstrap.voiceAvailable || !micOk)) talk.disabled = true;
+
+  const messageBody = rootDoc.getElementById('message-body');
+  const mentionList = rootDoc.getElementById('mention-list');
+  const agents = rootDoc.querySelectorAll('#mention-list [data-slug]');
+  function syncMentions() {
+    if (!messageBody || !mentionList) return;
+    const query = mentionQuery(messageBody.value, messageBody.selectionStart);
+    let shown = 0;
+    agents.forEach((item) => {
+      const match = query != null && visibleMentions([{
+        slug: item.dataset.slug,
+        name: item.textContent || '',
+      }], query).length > 0;
+      item.hidden = !match;
+      if (match) shown += 1;
+    });
+    mentionList.hidden = shown === 0;
+  }
+  if (messageBody) {
+    messageBody.addEventListener('input', syncMentions);
+    messageBody.addEventListener('click', syncMentions);
+    messageBody.addEventListener('keyup', syncMentions);
+  }
+  if (mentionList) {
+    mentionList.addEventListener('click', (event) => {
+      const item = event.target.closest('[data-slug]');
+      if (!item || !messageBody) return;
+      const query = mentionQuery(messageBody.value, messageBody.selectionStart);
+      if (query == null) return;
+      const cursor = messageBody.selectionStart;
+      const start = cursor - query.length;
+      messageBody.value = `${messageBody.value.slice(0, start)}${item.dataset.slug} ${messageBody.value.slice(cursor)}`;
+      mentionList.hidden = true;
+      messageBody.focus();
+    });
+  }
 
   const form = rootDoc.getElementById('team-composer');
   const errorBox = rootDoc.getElementById('team-form-error');
@@ -393,35 +493,97 @@ function initTeam(doc) {
     });
   });
 
+  const voiceDialog = rootDoc.getElementById('ai-voice');
+  const voiceBanner = rootDoc.getElementById('ai-voice-banner');
+  const voiceLive = rootDoc.getElementById('ai-voice-live');
+  const voiceStart = rootDoc.getElementById('ai-voice-start');
+  const voiceCancel = rootDoc.getElementById('ai-voice-cancel');
+  const voiceConsent = rootDoc.getElementById('ai-voice-consent');
+  const orgName = root.dataset.aiOrg || 'Scavvers Labs';
+  let pendingSpeak = '';
+  function setVoiceName(name) {
+    rootDoc.querySelectorAll('.ai-voice-name').forEach((node) => {
+      node.textContent = name;
+    });
+    const script = rootDoc.getElementById('ai-voice-script');
+    if (script) script.textContent = `Du pratar med en AI-agent. Rösten tillhör ${name}, som handlar för ${orgName}.`;
+    const bannerText = rootDoc.getElementById('ai-voice-banner-text');
+    if (bannerText) bannerText.textContent = `Du pratar med ${name} (AI-agent)`;
+    const liveText = rootDoc.querySelector('.ai-voice-live__text');
+    if (liveText) liveText.textContent = `Samtal med AI-agent · ${name}`;
+  }
+  function showCall(active) {
+    if (voiceBanner) voiceBanner.hidden = !active;
+    if (voiceLive) voiceLive.hidden = !active;
+  }
+  function openVoice(name) {
+    setVoiceName(name);
+    if (!voiceDialog) return;
+    voiceDialog.hidden = false;
+    if (voiceStart) voiceStart.focus();
+  }
+  function closeVoice() {
+    pendingSpeak = '';
+    if (voiceDialog) voiceDialog.hidden = true;
+  }
+  if (voiceCancel) voiceCancel.addEventListener('click', closeVoice);
+  if (voiceConsent) {
+    voiceConsent.addEventListener('click', () => {
+      const ackBox = rootDoc.getElementById('voice-ack');
+      if (ackBox) ackBox.focus();
+    });
+  }
+
+  async function playSpeech(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      showError('Speech playback is unavailable.');
+      showCall(false);
+      return;
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const audio = new Audio(objectUrl);
+    audio.onended = () => {
+      URL.revokeObjectURL(objectUrl);
+      showCall(false);
+    };
+    showCall(true);
+    await audio.play();
+  }
+
   if (log) {
-    log.addEventListener('click', async (event) => {
+    log.addEventListener('click', (event) => {
       const button = event.target.closest('[data-speak]');
       if (!button) return;
-      const response = await fetch(button.dataset.speak);
-      if (!response.ok) {
-        showError('Speech playback is unavailable.');
-        return;
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => URL.revokeObjectURL(url);
-      await audio.play();
+      pendingSpeak = button.dataset.speak;
+      openVoice(button.dataset.agentName || root.dataset.aiNames || 'AI-agent');
     });
   }
 
   if (talk && bootstrap.voiceAvailable && micOk) {
     let active = null;
     const ack = rootDoc.getElementById('voice-ack');
-    const storage = rootDoc.defaultView && rootDoc.defaultView.sessionStorage;
     if (ack && storage && storage.getItem('gitgram-voice-ack') === '1') ack.checked = true;
     if (ack) {
       ack.addEventListener('change', () => {
         if (storage) storage.setItem('gitgram-voice-ack', ack.checked ? '1' : '0');
       });
     }
+    function openRoomVoice(event) {
+      event.preventDefault();
+      pendingSpeak = '';
+      openVoice(root.dataset.aiNames || 'AI-agent');
+    }
     async function start(event) {
       event.preventDefault();
+      if (pendingSpeak) {
+        const url = pendingSpeak;
+        pendingSpeak = '';
+        if (voiceDialog) voiceDialog.hidden = true;
+        await playSpeech(url);
+        return;
+      }
       if (pushToTalkBlocked({
         voiceAvailable: bootstrap.voiceAvailable,
         micSupported: micOk,
@@ -441,20 +603,27 @@ function initTeam(doc) {
         });
         const stopped = new Promise((resolve) => recorder.addEventListener('stop', resolve, { once: true }));
         recorder.start();
+        if (voiceDialog) voiceDialog.hidden = true;
+        showCall(true);
         talk.dataset.recording = '1';
         talk.setAttribute('aria-pressed', 'true');
         active = { stream, recorder, chunks, stopped };
+        rootDoc.addEventListener('pointerup', stop);
+        rootDoc.addEventListener('pointercancel', stop);
       } catch {
         talk.disabled = true;
         if (status) status.textContent = bootstrap.micNotice;
       }
     }
     async function stop() {
+      rootDoc.removeEventListener('pointerup', stop);
+      rootDoc.removeEventListener('pointercancel', stop);
       if (!active) return;
       const current = active;
       active = null;
       talk.dataset.recording = '0';
       talk.setAttribute('aria-pressed', 'false');
+      showCall(false);
       if (current.recorder.state !== 'inactive') current.recorder.stop();
       await current.stopped;
       current.stream.getTracks().forEach((track) => track.stop());
@@ -474,14 +643,25 @@ function initTeam(doc) {
       }
       appendItem(data.message);
     }
-    talk.addEventListener('pointerdown', start);
-    talk.addEventListener('pointerup', stop);
-    talk.addEventListener('pointercancel', stop);
-    talk.addEventListener('keydown', (event) => {
-      if (event.key === ' ' || event.key === 'Enter') start(event);
-    });
-    talk.addEventListener('keyup', (event) => {
-      if (event.key === ' ' || event.key === 'Enter') stop();
+    talk.addEventListener('click', openRoomVoice);
+    if (voiceStart) {
+      voiceStart.addEventListener('pointerdown', start);
+      voiceStart.addEventListener('pointerup', stop);
+      voiceStart.addEventListener('pointercancel', stop);
+      voiceStart.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') start(event);
+      });
+      voiceStart.addEventListener('keyup', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') stop();
+      });
+    }
+  } else if (voiceStart) {
+    voiceStart.addEventListener('click', async () => {
+      if (!pendingSpeak) return;
+      const url = pendingSpeak;
+      pendingSpeak = '';
+      if (voiceDialog) voiceDialog.hidden = true;
+      await playSpeech(url);
     });
   }
 
@@ -517,6 +697,8 @@ if (typeof module !== 'undefined' && module.exports) {
     voiceNotes,
     micSupported,
     pushToTalkBlocked,
+    mentionQuery,
+    visibleMentions,
     initTeam,
   };
 }

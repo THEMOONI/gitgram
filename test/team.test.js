@@ -9,7 +9,7 @@ const request = require('supertest');
 const WebSocket = require('ws');
 const { createApp } = require('../server');
 const { createFakeModel } = require('../lib/team/model');
-const { createFakeVoice, createUnavailableVoice, spokenText, voiceRetentionEnabled } = require('../lib/team/voice');
+const { createFakeVoice, createUnavailableVoice, spokenText, voiceRetentionEnabled, markGeneratedAudio } = require('../lib/team/voice');
 const { extractPdfText } = require('../lib/team/pdf');
 const { planAgentReply, resumePlannedReply } = require('../lib/team/turn');
 const { agentShouldRespond } = require('../lib/team/policy');
@@ -22,6 +22,8 @@ const {
   voiceNotes,
   micSupported,
   pushToTalkBlocked,
+  mentionQuery,
+  visibleMentions,
 } = require('../public/js/team');
 const { buildReport } = require('../scripts/check-licenses');
 const agentsConfig = require('../config/agents.json');
@@ -179,12 +181,24 @@ test('client renderers escape messages and flags and voice notes degrade', () =>
   assert.doesNotMatch(html, /<script>alert/);
   assert.doesNotMatch(html, /<img src/);
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.match(html, /aria-label="Det här är en AI-agent"/);
   assert.match(html, /AI-agent/);
-  assert.match(html, /AI-generated/);
+  assert.doesNotMatch(html, /ai-content/);
   assert.equal(pushToTalkBlocked({ voiceAvailable: true, micSupported: true, acknowledged: false }), true);
   assert.equal(pushToTalkBlocked({ voiceAvailable: true, micSupported: true, acknowledged: true }), false);
-  assert.equal(spokenText('Paper discussion only.', { disclose: true, disclosure: 'Du pratar med en AI-agent' }), 'Du pratar med en AI-agent. Paper discussion only.');
-  assert.equal(spokenText('Paper discussion only.', { disclose: false, disclosure: 'Du pratar med en AI-agent' }), 'Paper discussion only.');
+  assert.equal(spokenText('Paper discussion only.', { disclose: true, disclosure: 'Du pratar med en AI-röst' }), 'Du pratar med en AI-röst. Paper discussion only.');
+  assert.equal(spokenText('Paper discussion only.', { disclose: false, disclosure: 'Du pratar med en AI-röst' }), 'Paper discussion only.');
+  assert.equal(mentionQuery('hello @de', 9), 'de');
+  assert.equal(mentionQuery('hello', 5), null);
+  assert.deepEqual(visibleMentions([{ slug: 'dev', name: 'Dev' }, { slug: 'juridik', name: 'Juridik' }], 'ju').map((agent) => agent.slug), ['juridik']);
+  const marked = markGeneratedAudio(Buffer.from('RIFF'), 'audio/wav', {
+    provider: 'fake',
+    model: 'fake',
+    generatedAt: '2026-10-05T00:00:00.000Z',
+  });
+  assert.match(marked.toString('latin1'), /AI-Generated/);
+  assert.match(marked.toString('latin1'), /AI-Provider/);
+  assert.match(marked.toString('latin1'), /fake/);
   assert.equal(voiceRetentionEnabled({ retainVoiceAudio: false }, {}), false);
   assert.equal(voiceRetentionEnabled({ retainVoiceAudio: true }, { TEAM_RETAIN_VOICE: '0' }), false);
   assert.equal(voiceRetentionEnabled({ retainVoiceAudio: false }, { TEAM_RETAIN_VOICE: '1' }), true);
@@ -436,15 +450,32 @@ test('room auth, membership, escaping, caps, hops, voice, and flags', async (t) 
   const tradingPage = await alice.get('/team/general');
   const occurrences = tradingPage.text.split(TRADING_LABEL).length - 1;
   assert.ok(occurrences >= 2);
-  assert.match(tradingPage.text, /team-ai-badge">AI-agent/);
-  assert.match(tradingPage.text, /team-ai-tag">AI-agent/);
-  assert.match(tradingPage.text, /team-generated">AI-generated/);
+  assert.match(tradingPage.text, /class="ai-badge"/);
+  assert.match(tradingPage.text, /aria-label="Det här är en AI-agent"/);
+  assert.match(tradingPage.text, /class="ai-avatar"/);
+  assert.match(tradingPage.text, /role="alertdialog"/);
+  assert.match(tradingPage.text, /Du interagerar med en AI-agent/);
+  assert.match(tradingPage.text, /Dev<\/b> är en AI-agent som handlar för <b>Scavvers Labs<\/b>/);
+  assert.match(tradingPage.text, /Jag förstår/);
+  assert.match(tradingPage.text, /id="ai-persistent"/);
+  assert.match(tradingPage.text, /AI-agent<\/b> · Designer, Dev, Juridik, Researcher och Trading handlar för Scavvers Labs/);
+  assert.match(tradingPage.text, /id="ai-voice"/);
+  assert.match(tradingPage.text, /Du pratar med en AI-agent/);
+  assert.match(tradingPage.text, /Röstinspelning: av/);
+  assert.match(tradingPage.text, /Starta samtal/);
+  assert.match(tradingPage.text, /class="ai-voice-live"/);
+  assert.match(tradingPage.text, /class="ai-voice-banner"/);
+  assert.doesNotMatch(tradingPage.text, /class="ai-content"/);
   assert.match(tradingPage.text, /id="voice-cloud-notice"/);
   assert.match(tradingPage.text, /cloud speech provider/);
   assert.match(tradingPage.text, /id="voice-retention-notice"/);
   assert.match(tradingPage.text, /raw recording is discarded/);
+  assert.match(tradingPage.text, /id="room-ai-notice"/);
+  assert.match(tradingPage.text, /id="mention-list"/);
+  assert.match(tradingPage.text, /data-slug="dev"/);
+  assert.match(tradingPage.text, /id="team-ai-live"/);
   assert.match(tradingPage.text, /id="voice-disclosure-notice"/);
-  assert.match(tradingPage.text, /Du pratar med en AI-agent/);
+  assert.match(tradingPage.text, /Du pratar med en AI-röst/);
   assert.match(tradingPage.text, /for="voice-ack"/);
   assert.match(tradingPage.text, /id="voice-ack"/);
   assert.equal(ctx.db.prepare('SELECT ai_generated FROM messages WHERE id = ?').get(tradingReply.body.message.id).ai_generated, 1);
@@ -467,11 +498,17 @@ test('room auth, membership, escaping, caps, hops, voice, and flags', async (t) 
   assert.match(speech.headers['content-type'], /audio\/wav/);
   assert.equal(speech.body.subarray(0, 4).toString(), 'RIFF');
   assert.equal(speech.headers['x-gitgram-ai-disclosure'], '1');
-  assert.match(ctx.app.locals.voice.lastSpoken, /^Du pratar med en AI-agent\b/);
+  assert.equal(speech.headers['x-ai-generated'], 'true');
+  assert.match(speech.body.toString('latin1'), /AI-Generated/);
+  assert.match(speech.body.toString('latin1'), /AI-Provider/);
+  assert.match(speech.body.toString('latin1'), /AI-Model/);
+  assert.match(ctx.app.locals.voice.lastSpoken, /^Du pratar med en AI-röst/);
   const speechAgain = await alice.get(`/api/team/messages/${tradingReply.body.message.id}/speak`).buffer(true);
   assert.equal(speechAgain.status, 200);
+  assert.equal(speechAgain.headers['x-ai-generated'], 'true');
   assert.equal(speechAgain.headers['x-gitgram-ai-disclosure'], '0');
-  assert.equal(ctx.app.locals.voice.lastSpoken.startsWith('Du pratar med en AI-agent'), false);
+  assert.equal(speechAgain.body.toString('latin1').includes('AI-Generated'), true);
+  assert.equal(ctx.app.locals.voice.lastSpoken.startsWith('Du pratar med en AI-röst'), false);
   assert.equal(fs.existsSync(path.join(ctx.dir, 'data', 'voice-retained')), false);
 
   const ws = new WebSocket(`ws://127.0.0.1:${ctx.port}/team/ws`, {

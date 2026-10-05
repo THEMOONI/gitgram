@@ -1,0 +1,709 @@
+/* Gitgram AI-märkning (EU AI Act art. 50 / riktlinjer §7.1–7.3)
+   Scope: alla klasser under .ai-mark / [data-ai-mark]. Inga globala resets.
+   Tokens: --ai-* (kan överskridas av Terminal Volt eller TIFI-tema).
+   TIFI: befintliga .tifi-badge-ai / .tifi-voice behålls; dessa komponenter
+   kompletterar dem Gitgram-brett (chat, /team, röst, genererat innehåll). */
+
+.ai-mark,
+[data-ai-mark] {
+  /* --- Terminal Volt defaults (iris) --- */
+  --ai-bg: #0F1216;
+  --ai-bg-raised: #151920;
+  --ai-bg-soft: rgba(154, 140, 255, 0.12);
+  --ai-line: rgba(154, 140, 255, 0.45);
+  --ai-line-strong: #9A8CFF;
+  --ai-accent: #9A8CFF;
+  --ai-accent-text: #C9C1FF; /* ≥4.7:1 på ink-1/#0F1216 */
+  --ai-on-accent: #0A0C0F;
+  --ai-text-1: #ECEEF1;
+  --ai-text-2: #A7AFBC;
+  --ai-text-3: #7C8595;
+  --ai-focus: #C8F53B; /* volt focus i Terminal Volt */
+  --ai-focus-ring: 0 0 0 2px #0A0C0F, 0 0 0 4px #C8F53B;
+  --ai-danger: #FF5D7A;
+  --ai-ok: #3DDC97;
+  --ai-font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --ai-font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ai-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ai-radius-sm: 6px;
+  --ai-radius: 10px;
+  --ai-radius-lg: 14px;
+  --ai-radius-pill: 999px;
+  --ai-space-1: 4px;
+  --ai-space-2: 8px;
+  --ai-space-3: 12px;
+  --ai-space-4: 16px;
+  --ai-space-5: 20px;
+  --ai-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.8);
+  --ai-z-overlay: 60;
+  --ai-z-banner: 55;
+
+  font-family: var(--ai-font-ui);
+  color: var(--ai-text-1);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* TIFI-tema: orange fokus, iris AI-färg behålls (samma iris #9A8CFF) */
+.tifi .ai-mark,
+.tifi [data-ai-mark],
+[data-app="tifi"] .ai-mark,
+[data-app="tifi"] [data-ai-mark],
+.ai-mark--tifi {
+  --ai-bg: #0E0F12;
+  --ai-bg-raised: #15171B;
+  --ai-text-1: #F3F1EE;
+  --ai-text-2: #B9B4AC;
+  --ai-text-3: #948F87;
+  --ai-focus: #FF9A4D;
+  --ai-focus-ring: 0 0 0 2px #07080A, 0 0 0 4px #FF9A4D;
+}
+
+.ai-mark *,
+.ai-mark *::before,
+.ai-mark *::after,
+[data-ai-mark] *,
+[data-ai-mark] *::before,
+[data-ai-mark] *::after {
+  box-sizing: border-box;
+}
+
+.ai-mark :focus-visible,
+[data-ai-mark] :focus-visible {
+  outline: none;
+  box-shadow: var(--ai-focus-ring);
+}
+
+.ai-mark .ai-sr-only,
+[data-ai-mark] .ai-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ========== a) AI-etikett / badge ========== */
+.ai-mark .ai-badge,
+[data-ai-mark] .ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--ai-font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+  color: var(--ai-accent-text);
+  background: var(--ai-bg-soft);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-radius-pill);
+  padding: 1px 8px 1px 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.ai-mark .ai-badge svg,
+[data-ai-mark] .ai-badge svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
+
+.ai-mark .ai-badge--sm,
+[data-ai-mark] .ai-badge--sm {
+  font-size: 10px;
+  padding: 0 6px 0 5px;
+  gap: 4px;
+}
+
+.ai-mark .ai-badge--sm svg,
+[data-ai-mark] .ai-badge--sm svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Kompakt persistent etiket efter första erkännandet */
+.ai-mark .ai-badge--compact,
+[data-ai-mark] .ai-badge--compact {
+  font-size: 10px;
+  padding: 0 7px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Avatar-överlägg */
+.ai-mark .ai-avatar,
+[data-ai-mark] .ai-avatar {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.ai-mark .ai-avatar__img,
+[data-ai-mark] .ai-avatar__img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--ai-bg-raised);
+  border: 1.5px solid var(--ai-line-strong);
+}
+
+.ai-mark .ai-avatar__fallback,
+[data-ai-mark] .ai-avatar__fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--ai-font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ai-on-accent);
+  background: var(--ai-accent);
+  border: 1.5px solid var(--ai-line-strong);
+}
+
+.ai-mark .ai-avatar__mark,
+[data-ai-mark] .ai-avatar__mark {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 22px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ai-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ai-accent-text);
+  background: var(--ai-bg);
+  border: 1.5px solid var(--ai-line-strong);
+  border-radius: var(--ai-radius-pill);
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--ai-bg);
+}
+
+.ai-mark .ai-avatar--lg,
+[data-ai-mark] .ai-avatar--lg {
+  width: 56px;
+  height: 56px;
+}
+
+.ai-mark .ai-avatar--lg .ai-avatar__mark,
+[data-ai-mark] .ai-avatar--lg .ai-avatar__mark {
+  min-width: 26px;
+  height: 18px;
+  font-size: 10px;
+  right: -2px;
+  bottom: -2px;
+}
+
+/* ========== b) Första-interaktionsnotis ========== */
+.ai-mark .ai-first,
+[data-ai-mark] .ai-first {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--ai-space-4);
+  padding: var(--ai-space-5);
+  max-width: 520px;
+  background: var(--ai-bg);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-radius-lg);
+  box-shadow: var(--ai-shadow);
+}
+
+.ai-mark .ai-first__icon,
+[data-ai-mark] .ai-first__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--ai-bg-soft);
+  color: var(--ai-accent);
+  flex: none;
+}
+
+.ai-mark .ai-first__kicker,
+[data-ai-mark] .ai-first__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ai-mark .ai-first__title,
+[data-ai-mark] .ai-first__title {
+  font-family: var(--ai-font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin: 0 0 6px;
+  color: var(--ai-text-1);
+}
+
+.ai-mark .ai-first__body,
+[data-ai-mark] .ai-first__body {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ai-text-2);
+}
+
+.ai-mark .ai-first__body b,
+[data-ai-mark] .ai-first__body b {
+  color: var(--ai-text-1);
+  font-weight: 600;
+}
+
+.ai-mark .ai-first__actions,
+[data-ai-mark] .ai-first__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Overlay-variant (modal-liknande, ej stängbar utan erkännande) */
+.ai-mark .ai-first-overlay,
+[data-ai-mark] .ai-first-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ai-z-overlay);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(10, 12, 15, 0.72);
+}
+
+.ai-mark .ai-first-overlay[hidden],
+[data-ai-mark] .ai-first-overlay[hidden] {
+  display: none;
+}
+
+.ai-mark .ai-btn,
+[data-ai-mark] .ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--ai-radius);
+  font: 600 14px var(--ai-font-ui);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  color: inherit;
+  background: transparent;
+}
+
+.ai-mark .ai-btn--primary,
+[data-ai-mark] .ai-btn--primary {
+  background: var(--ai-accent);
+  color: var(--ai-on-accent);
+}
+
+.ai-mark .ai-btn--primary:hover,
+[data-ai-mark] .ai-btn--primary:hover {
+  filter: brightness(1.08);
+}
+
+.ai-mark .ai-btn--secondary,
+[data-ai-mark] .ai-btn--secondary {
+  background: var(--ai-bg-raised);
+  color: var(--ai-text-1);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.ai-mark .ai-btn--ghost,
+[data-ai-mark] .ai-btn--ghost {
+  color: var(--ai-text-2);
+}
+
+.ai-mark .ai-btn--ghost:hover,
+[data-ai-mark] .ai-btn--ghost:hover {
+  color: var(--ai-text-1);
+  background: var(--ai-bg-raised);
+}
+
+.ai-mark .ai-btn:disabled,
+[data-ai-mark] .ai-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Persistent kompakt etikett efter erkännande (chat-header / agent-rad) */
+.ai-mark .ai-persistent,
+[data-ai-mark] .ai-persistent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--ai-bg-soft);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-radius);
+  font-size: 12.5px;
+  color: var(--ai-text-2);
+}
+
+.ai-mark .ai-persistent b,
+[data-ai-mark] .ai-persistent b {
+  color: var(--ai-accent-text);
+  font-family: var(--ai-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ========== c) Röstbanner ========== */
+.ai-mark .ai-voice,
+[data-ai-mark] .ai-voice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 18px;
+  max-width: 480px;
+  background: var(--ai-bg-raised);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-radius-lg);
+}
+
+.ai-mark .ai-voice__icon,
+[data-ai-mark] .ai-voice__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--ai-bg-soft);
+  color: var(--ai-accent);
+}
+
+.ai-mark .ai-voice__title,
+[data-ai-mark] .ai-voice__title {
+  font-family: var(--ai-font-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--ai-text-1);
+}
+
+.ai-mark .ai-voice p,
+[data-ai-mark] .ai-voice p {
+  margin: 0;
+  color: var(--ai-text-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.ai-mark .ai-voice__meta,
+[data-ai-mark] .ai-voice__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.ai-mark .ai-voice__script,
+[data-ai-mark] .ai-voice__script {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: var(--ai-bg);
+  border: 1px dashed var(--ai-line);
+  border-radius: var(--ai-radius-sm);
+  font-family: var(--ai-font-mono);
+  font-size: 12px;
+  color: var(--ai-text-2);
+  line-height: 1.45;
+}
+
+.ai-mark .ai-voice__script strong,
+[data-ai-mark] .ai-voice__script strong {
+  display: block;
+  font-family: var(--ai-font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ai-text-3);
+  margin-bottom: 4px;
+}
+
+.ai-mark .ai-voice__actions,
+[data-ai-mark] .ai-voice__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Persistent indikator under pågående samtal */
+.ai-mark .ai-voice-live,
+[data-ai-mark] .ai-voice-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 12px 6px 10px;
+  background: var(--ai-bg);
+  border: 1px solid var(--ai-line);
+  border-left: 3px solid var(--ai-accent);
+  border-radius: var(--ai-radius);
+  font-size: 13px;
+  color: var(--ai-text-1);
+}
+
+.ai-mark .ai-voice-live__dot,
+[data-ai-mark] .ai-voice-live__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ai-accent);
+  flex: none;
+  box-shadow: 0 0 0 3px var(--ai-bg-soft);
+}
+
+.ai-mark .ai-voice-live__label,
+[data-ai-mark] .ai-voice-live__label {
+  font-family: var(--ai-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--ai-accent-text);
+}
+
+.ai-mark .ai-voice-live__text,
+[data-ai-mark] .ai-voice-live__text {
+  color: var(--ai-text-2);
+  font-size: 12.5px;
+}
+
+/* Toppbanner före/under röst (fullbredd) */
+.ai-mark .ai-voice-banner,
+[data-ai-mark] .ai-voice-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--ai-space-3);
+  min-height: 40px;
+  padding: 8px var(--ai-space-4);
+  background: var(--ai-bg-soft);
+  border-bottom: 1px solid var(--ai-line);
+  font-size: 13.5px;
+  color: var(--ai-text-1);
+  position: sticky;
+  top: 0;
+  z-index: var(--ai-z-banner);
+}
+
+.ai-mark .ai-voice-banner b,
+[data-ai-mark] .ai-voice-banner b {
+  font-family: var(--ai-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--ai-accent-text);
+}
+
+.ai-mark .ai-voice-banner__meta,
+[data-ai-mark] .ai-voice-banner__meta {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--ai-text-3);
+}
+
+/* ========== Märkning av AI-genererat / manipulerat innehåll ========== */
+.ai-mark .ai-content,
+[data-ai-mark] .ai-content {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.ai-mark .ai-content__label,
+[data-ai-mark] .ai-content__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ai-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--ai-accent-text);
+  background: var(--ai-bg);
+  border: 1px solid var(--ai-line);
+  border-radius: var(--ai-radius-sm);
+  padding: 3px 8px 3px 6px;
+  line-height: 1.4;
+}
+
+.ai-mark .ai-content__label svg,
+[data-ai-mark] .ai-content__label svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+}
+
+.ai-mark .ai-content--overlay .ai-content__label,
+[data-ai-mark] .ai-content--overlay .ai-content__label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.ai-mark .ai-content__frame,
+[data-ai-mark] .ai-content__frame {
+  display: block;
+  width: 100%;
+  border-radius: var(--ai-radius);
+  border: 1px solid var(--ai-line);
+  background: var(--ai-bg-raised);
+  overflow: hidden;
+}
+
+.ai-mark .ai-content__frame img,
+.ai-mark .ai-content__frame video,
+[data-ai-mark] .ai-content__frame img,
+[data-ai-mark] .ai-content__frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.ai-mark .ai-content__caption,
+[data-ai-mark] .ai-content__caption {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--ai-text-3);
+}
+
+.ai-mark .ai-content--text,
+[data-ai-mark] .ai-content--text {
+  display: block;
+  padding: 12px 14px;
+  background: var(--ai-bg-raised);
+  border: 1px solid var(--ai-line);
+  border-left: 3px solid var(--ai-accent);
+  border-radius: var(--ai-radius);
+}
+
+.ai-mark .ai-content--text .ai-content__label,
+[data-ai-mark] .ai-content--text .ai-content__label {
+  margin-bottom: 8px;
+}
+
+.ai-mark .ai-content--text p,
+[data-ai-mark] .ai-content--text p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ai-text-1);
+}
+
+/* Varianten "fullt AI-genererat" vs "delvis AI-modifierat" (CoP-ikoner, textetikett obligatorisk) */
+.ai-mark .ai-content__label--full::after,
+[data-ai-mark] .ai-content__label--full::after {
+  content: none;
+}
+
+/* Lock/chip meta */
+.ai-mark .ai-chip,
+[data-ai-mark] .ai-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--ai-font-mono);
+  font-size: 11px;
+  color: var(--ai-text-3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--ai-radius-pill);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+/* ========== Reduced motion ========== */
+@media (prefers-reduced-motion: reduce) {
+  .ai-mark .ai-voice-live__dot,
+  [data-ai-mark] .ai-voice-live__dot {
+    animation: none !important;
+    box-shadow: 0 0 0 3px var(--ai-bg-soft);
+  }
+
+  .ai-mark *,
+  [data-ai-mark] * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@keyframes ai-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--ai-bg-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(154, 140, 255, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ai-mark .ai-voice-live__dot,
+  [data-ai-mark] .ai-voice-live__dot {
+    animation: ai-pulse 1.8s ease-in-out infinite;
+  }
+}
+
+/* ========== Responsivitet ========== */
+@media (max-width: 600px) {
+  .ai-mark .ai-first,
+  [data-ai-mark] .ai-first,
+  .ai-mark .ai-voice,
+  [data-ai-mark] .ai-voice {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .ai-mark .ai-voice-banner,
+  [data-ai-mark] .ai-voice-banner {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .ai-mark .ai-voice-banner__meta,
+  [data-ai-mark] .ai-voice-banner__meta {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .ai-mark .ai-first__actions,
+  [data-ai-mark] .ai-first__actions,
+  .ai-mark .ai-voice__actions,
+  [data-ai-mark] .ai-voice__actions {
+    flex-direction: column;
+  }
+
+  .ai-mark .ai-btn,
+  [data-ai-mark] .ai-btn {
+    width: 100%;
+  }
+}
