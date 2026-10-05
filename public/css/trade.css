@@ -1,0 +1,16 @@
+.trade-page .trade-note { margin: 0; padding: 14px 18px; color: var(--tx-2); }
+.trade-page .trade-alert { margin: 14px 0; }
+.trade-page .attr { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 12px 18px 16px; color: var(--demo); font-size: 14px; }
+.trade-page .attr a { color: var(--sky); font-size: 14px; }
+.trade-page select { width: 100%; background: transparent; color: var(--tx-1); border: 0; padding: 10px 12px; font: 500 14.5px var(--f-ui); }
+.trade-page .trade-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.trade-page .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 8px 0 12px; }
+.trade-page .metrics div { background: var(--ink-2); border-radius: 10px; padding: 10px 12px; }
+.trade-page .metrics dt { color: var(--tx-3); font-size: 12px; }
+.trade-page .metrics dd { margin: 4px 0 0; font-size: 18px; }
+.trade-page .spark { width: 100%; height: 80px; background: var(--ink-0); border-radius: 10px; }
+.trade-page .geo-note { margin-top: 18px; color: var(--tx-3); font-size: 12.5px; }
+.trade-page .dframe + .dframe, .trade-page .whead + .dframe { margin-top: 16px; }
+@media (max-width: 800px) {
+  .trade-page .trade-split, .trade-page .metrics { grid-template-columns: 1fr; }
+}

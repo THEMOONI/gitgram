@@ -1,0 +1,93 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="/css/wallet.css">
+<link rel="stylesheet" href="/css/trade.css">
+<div class="wallet-page trade-page" data-demo="true" data-notice="<%= notice %>">
+  <div class="wpage">
+    <div class="wrap">
+      <div class="crumbs mono"><a href="/trade">paper</a> <span>/</span> backtest</div>
+      <div class="whead">
+        <div>
+          <div class="kicker">Backtest · demo</div>
+          <h1 class="wh1">Simulated backtest</h1>
+          <p class="wsub">Same order, risk and fill engine as paper trading. This run never touches the live wallet ledger.</p>
+        </div>
+        <span class="demo-pill">● Demo environment</span>
+      </div>
+      <section class="dframe">
+        <div class="dbanner"><b>DEMO MODE</b><span>· <%= notice %> · simulated data · no real money</span></div>
+        <p class="trade-note"><%= simulatedLong %></p>
+      </section>
+      <% if (formError) { %><p class="hint err trade-alert" role="alert"><%= formError %></p><% } %>
+      <section class="dframe">
+        <form class="tform" id="run-backtest" method="POST" action="/trade/backtest">
+          <h2 class="h3">Run on the fictional price feed</h2>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="fg">
+            <label for="strategy-id">Strategy</label>
+            <div class="inp"><select id="strategy-id" name="strategy_id">
+              <% strategies.forEach(function (item) { %><option value="<%= item.id %>"><%= item.label %></option><% }) %>
+            </select></div>
+          </div>
+          <div class="trade-split">
+            <div class="fg">
+              <label for="from-date">From</label>
+              <div class="inp"><input id="from-date" name="from" value="2024-06-01"></div>
+            </div>
+            <div class="fg">
+              <label for="to-date">To</label>
+              <div class="inp"><input id="to-date" name="to" value="2025-12-31"></div>
+            </div>
+          </div>
+          <p class="hint">Published defaults are SMA 50/200. A shorter window may show no trades, which is still a simulated result.</p>
+          <button class="btn btn-primary btn-lg" type="submit">Run simulated backtest</button>
+          <p class="sim"><%= simulatedLong %></p>
+        </form>
+      </section>
+      <% if (result) { %>
+        <section class="dframe" id="backtest-result" aria-labelledby="bt-h">
+          <div class="dbanner"><b>SIMULERAT RESULTAT</b><span>· <%= result.resultLabel %></span></div>
+          <div class="tform">
+            <h2 class="h3" id="bt-h"><%= result.strategyId %></h2>
+            <p class="trade-note"><%= result.resultLabelLong %></p>
+            <dl class="metrics">
+              <div><dt>CAGR</dt><dd class="mono"><%= result.metrics.cagr == null ? '—' : result.metrics.cagr %></dd></div>
+              <div><dt>Max drawdown</dt><dd class="mono"><%= result.metrics.maxDrawdown == null ? '—' : result.metrics.maxDrawdown %></dd></div>
+              <div><dt>Sharpe (rf 0)</dt><dd class="mono"><%= result.metrics.sharpe == null ? '—' : result.metrics.sharpe %></dd></div>
+              <div><dt>Trades</dt><dd class="mono"><%= result.metrics.trades %></dd></div>
+              <div><dt>Win rate</dt><dd class="mono"><%= result.metrics.winRate == null ? '—' : result.metrics.winRate %></dd></div>
+              <div><dt>Exposure</dt><dd class="mono"><%= result.metrics.exposure == null ? '—' : result.metrics.exposure %></dd></div>
+            </dl>
+            <p class="hint"><%= result.benchmarks.note %> Equal-weight close return <%= result.benchmarks.equalWeightCloseReturn == null ? '—' : result.benchmarks.equalWeightCloseReturn %>. BTC close return <%= result.benchmarks.btcCloseReturn == null ? '—' : result.benchmarks.btcCloseReturn %>.</p>
+            <% if (result.equity && result.equity.length > 1) { %>
+              <svg class="spark" viewBox="0 0 320 80" role="img" aria-label="Simulated equity curve">
+                <polyline fill="none" stroke="#FFB547" stroke-width="2" points="<%
+                  var vals = result.equity.map(function (p) { return Number(p.equity); });
+                  var min = Math.min.apply(null, vals);
+                  var max = Math.max.apply(null, vals);
+                  var span = max - min || 1;
+                  var pts = vals.map(function (v, i) {
+                    var x = (i / (vals.length - 1)) * 320;
+                    var y = 74 - ((v - min) / span) * 68;
+                    return x.toFixed(1) + ',' + y.toFixed(1);
+                  });
+                %><%= pts.join(' ') %>"></polyline>
+              </svg>
+            <% } %>
+            <p class="attr" id="price-attribution">
+              <% if (attribution.url) { %>
+                <span>Powered by CoinGecko</span>
+                <a href="<%= attribution.url %>">Data provided by CoinGecko</a>
+              <% } else { %>
+                <span><%= attribution.powered %></span>
+                <span><%= attribution.provided %></span>
+              <% } %>
+            </p>
+          </div>
+        </section>
+      <% } %>
+      <p class="geo-note"><%= geoNote %></p>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>
