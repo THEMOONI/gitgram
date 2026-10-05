@@ -87,6 +87,7 @@ function markerName() {
 
 test('name allowlist rejects traversal and shell metacharacters', () => {
   assert.equal(isValidUsername('alice'), true);
+  assert.equal(isValidUsername('team'), false);
   assert.equal(isValidUsername('ab'), false);
   assert.equal(isValidUsername('../etc'), false);
   assert.equal(isValidUsername('a;id'), false);

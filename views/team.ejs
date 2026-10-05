@@ -1,0 +1,300 @@
+<%- include('partials/header') %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/css/team.css">
+<link rel="stylesheet" href="/css/ai-markning.css">
+<% const sevClass = { 'hög': 'high', 'medel': 'medium', 'låg': 'low' }; %>
+<% const aiOrg = 'Scavvers Labs'; %>
+<% const aiAgentMembers = members.filter(function(member) { return member.type === 'agent'; }); %>
+<% const aiNameList = aiAgentMembers.length < 2 ? (aiAgentMembers[0] ? aiAgentMembers[0].name : 'AI-agent') : aiAgentMembers.slice(0, -1).map(function(member) { return member.name; }).join(', ') + ' och ' + aiAgentMembers[aiAgentMembers.length - 1].name; %>
+<div class="team-app ai-mark" id="team-app" data-panel="chat" data-ai-mark data-ai-org="<%= aiOrg %>" data-ai-names="<%= aiNameList %>">
+  <div class="ai-first-overlay" id="ai-first-overlay">
+    <div class="ai-first" role="alertdialog" aria-modal="true" aria-labelledby="ai-first-title" aria-describedby="ai-first-body" id="room-ai-notice">
+      <div class="ai-first__icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>
+      </div>
+      <div>
+        <div class="ai-first__kicker">
+          <span class="ai-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span>
+        </div>
+        <h2 class="ai-first__title" id="ai-first-title">Du interagerar med en AI-agent</h2>
+        <div id="ai-first-body">
+          <% aiAgentMembers.forEach(function(member) { %>
+            <p class="ai-first__body"><b><%= member.name %></b> är en AI-agent som handlar för <b><%= aiOrg %></b>. Den är inte en människa. Du kan avsluta när som helst.</p>
+          <% }) %>
+        </div>
+      </div>
+      <div class="ai-first__actions">
+        <button type="button" class="ai-btn ai-btn--primary" id="ai-first-ack">Jag förstår</button>
+        <a class="ai-btn ai-btn--ghost" href="https://digital-strategy.ec.europa.eu/en/faqs/transparency-obligations-under-article-50-ai-act" target="_blank" rel="noopener noreferrer">Läs mer om AI-märkning</a>
+      </div>
+    </div>
+  </div>
+  <header class="team-head">
+    <p class="team-kicker">JARVIS <span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span></p>
+    <div class="team-head-row">
+      <h1>Team</h1>
+      <p class="team-room-name">#<%= room.slug %></p>
+    </div>
+    <p class="ai-persistent" id="ai-persistent" role="status" hidden>
+      <span class="ai-badge ai-badge--compact" aria-hidden="true">AI</span>
+      <span><b>AI-agent</b> · <%= aiNameList %> handlar för <%= aiOrg %></span>
+    </p>
+    <p id="team-ai-live" class="team-ai-live" role="status" aria-live="polite"></p>
+  </header>
+  <div class="team-tabs" role="tablist" aria-label="Team sections">
+    <button type="button" class="team-tab" id="tab-rooms" data-tab="rooms" role="tab" aria-controls="panel-rooms" aria-selected="false">Rooms</button>
+    <button type="button" class="team-tab is-selected" id="tab-chat" data-tab="chat" role="tab" aria-controls="panel-chat" aria-selected="true">Chat</button>
+    <button type="button" class="team-tab" id="tab-people" data-tab="people" role="tab" aria-controls="panel-people" aria-selected="false">People</button>
+  </div>
+  <aside class="team-rooms" id="panel-rooms" role="tabpanel" aria-labelledby="tab-rooms">
+    <h2>Rooms</h2>
+    <ul class="team-room-list">
+      <% rooms.forEach(function(item) { %>
+        <li>
+          <a class="team-room-link<%= item.slug === room.slug ? ' is-active' : '' %>" href="/team/<%= item.slug %>"<%= item.slug === room.slug ? ' aria-current="page"' : '' %>>#<%= item.slug %></a>
+        </li>
+      <% }) %>
+    </ul>
+    <form class="team-new-room" method="post" action="/team/rooms">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label for="room-name">New room</label>
+      <div class="team-inline">
+        <input id="room-name" name="name" maxlength="60" required autocomplete="off">
+        <button type="submit" class="tbtn tbtn-secondary">Create</button>
+      </div>
+    </form>
+    <% if (pageError) { %><p class="team-error" role="alert"><%= pageError %></p><% } %>
+  </aside>
+  <section class="team-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+    <div class="ai-voice-banner" id="ai-voice-banner" role="status" aria-live="polite" hidden>
+      <span class="ai-badge ai-badge--compact" aria-hidden="true">AI</span>
+      <b>AI-samtal aktivt</b>
+      <span id="ai-voice-banner-text">Du pratar med <%= aiNameList %> (AI-agent)</span>
+      <span class="ai-voice-banner__meta">Röstinspelning: av</span>
+    </div>
+    <div class="team-chat-bar">
+      <h2>Chat</h2>
+      <form class="team-filters" method="get" action="/team/<%= room.slug %>">
+        <div>
+          <label for="filter-severity">Severity</label>
+          <select id="filter-severity" name="severity">
+            <option value=""<%= filters.severity === '' ? ' selected' : '' %>>All</option>
+            <option value="hög"<%= filters.severity === 'hög' ? ' selected' : '' %>>hög</option>
+            <option value="medel"<%= filters.severity === 'medel' ? ' selected' : '' %>>medel</option>
+            <option value="låg"<%= filters.severity === 'låg' ? ' selected' : '' %>>låg</option>
+          </select>
+        </div>
+        <div>
+          <label for="filter-project">Project</label>
+          <input id="filter-project" name="project" value="<%= filters.project %>" maxlength="60">
+        </div>
+        <div>
+          <label for="filter-ack">Acknowledged</label>
+          <select id="filter-ack" name="ack">
+            <option value="all"<%= filters.ack === 'all' ? ' selected' : '' %>>All</option>
+            <option value="open"<%= filters.ack === 'open' ? ' selected' : '' %>>Unacknowledged</option>
+            <option value="done"<%= filters.ack === 'done' ? ' selected' : '' %>>Acknowledged</option>
+          </select>
+        </div>
+        <button type="submit" class="tbtn tbtn-secondary">Filter</button>
+      </form>
+    </div>
+    <div class="team-log" id="team-log" role="log" aria-live="polite" aria-relevant="additions">
+      <% if (!items.length) { %>
+        <p class="team-empty" id="team-empty">No messages yet. Mention @dev, @juridik or @trading.</p>
+      <% } %>
+      <% items.forEach(function(item) { %>
+        <% if (item.kind === 'flag') { %>
+          <article class="team-flag sev-<%= sevClass[item.severity] || 'unknown' %>" id="flag-<%= item.id %>">
+            <p class="team-flag-kicker"><%= item.kindLabel %></p>
+            <h3><%= item.title %></h3>
+            <p class="team-sev">Severity <strong><%= item.severity %></strong></p>
+            <p><%= item.summary %></p>
+            <p>Projects <% if (!item.affectedProjects.length) { %><span>Inga</span><% } else { item.affectedProjects.forEach(function(project) { %><span class="team-chip"><%= project %></span><% }) } %></p>
+            <p>Agents <% if (!item.affectedAgents.length) { %><span>Inga</span><% } else { item.affectedAgents.forEach(function(name) { %><span class="team-chip"><%= name %></span><% }) } %></p>
+            <p>Recommended action: <%= item.recommendedAction %></p>
+            <p class="team-lawyer-badge"><%= item.needsLawyerText %></p>
+            <% if (item.safeUrl) { %>
+              <p><a href="<%= item.safeUrl %>" rel="noopener noreferrer" target="_blank"><%= item.sourceUrl %></a></p>
+            <% } %>
+            <ul class="team-acks">
+              <% item.acknowledgements.forEach(function(ack) { %>
+                <li>Acknowledged by <%= ack.username %> at <time datetime="<%= ack.createdAt %>"><%= ack.displayTime %></time></li>
+              <% }) %>
+            </ul>
+            <form method="post" action="/api/team/flags/<%= item.id %>/ack">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="tbtn tbtn-secondary">Acknowledge</button>
+            </form>
+          </article>
+        <% } else { %>
+          <article class="team-msg is-<%= item.panel %>" id="message-<%= item.id %>">
+            <header class="team-msg-head">
+              <% if (item.authorType === 'agent') { %>
+                <span class="ai-avatar" aria-label="<%= item.authorName %>, AI-agent">
+                  <span class="ai-avatar__fallback" aria-hidden="true"><%= item.authorName.charAt(0).toUpperCase() %></span>
+                  <span class="ai-avatar__mark" aria-hidden="true">AI</span>
+                  <span class="ai-sr-only">AI-agent</span>
+                </span>
+              <% } %>
+              <span class="team-author"><%= item.authorName %></span>
+              <% if (item.authorType === 'agent') { %><span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span><% } %>
+              <time datetime="<%= item.createdAt %>"><%= item.displayTime %></time>
+            </header>
+            <% if (item.disclaimer && item.panel === 'demo') { %>
+              <p class="team-demo-banner"><%= item.disclaimer %></p>
+            <% } %>
+            <% if (item.risks.length) { %>
+              <ul class="team-risks">
+                <% item.risks.forEach(function(risk) { %><li><%= risk %></li><% }) %>
+              </ul>
+            <% } %>
+            <p class="team-body"><%= item.body %></p>
+            <% if (item.legalTags.length) { %>
+              <ul class="team-tags">
+                <% item.legalTags.forEach(function(tag) { %><li><%= tag %></li><% }) %>
+              </ul>
+            <% } %>
+            <% item.badges.forEach(function(badge) { %>
+              <p class="team-lawyer-badge"><%= badge.label %></p>
+            <% }) %>
+            <% if (item.documents.length) { %>
+              <ul class="team-files">
+                <% item.documents.forEach(function(doc) { %>
+                  <li><span class="team-file-name"><%= doc.name %></span> <span class="team-preview"><%= doc.preview %></span></li>
+                <% }) %>
+              </ul>
+            <% } %>
+            <% if (item.disclaimer && item.panel === 'legal') { %>
+              <p class="team-disclaimer"><%= item.disclaimer %></p>
+            <% } %>
+            <% if (voiceAvailable && item.authorType === 'agent') { %>
+              <button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/<%= item.id %>/speak" data-agent-name="<%= item.authorName %>">Play AI speech</button>
+            <% } %>
+          </article>
+        <% } %>
+      <% }) %>
+      <% approvals.forEach(function(approval) { %>
+        <article class="team-approval" id="approval-<%= approval.id %>">
+          <p class="team-ai-tag">Approval</p>
+          <p><%= approval.agentName %> wants to run <code><%= approval.toolName %></code></p>
+          <pre><%= approval.toolInput %></pre>
+          <% if (role === 'owner') { %>
+            <form method="post" action="/api/team/approvals/<%= approval.id %>">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="tbtn tbtn-primary" name="decision" value="approve">Approve</button>
+              <button type="submit" class="tbtn tbtn-secondary" name="decision" value="deny">Deny</button>
+            </form>
+          <% } else { %>
+            <p>Waiting for the room owner.</p>
+          <% } %>
+        </article>
+      <% }) %>
+    </div>
+    <form class="team-composer" id="team-composer">
+      <label for="message-body">Message</label>
+      <textarea id="message-body" name="body" maxlength="4000" rows="3" placeholder="Message the room. Use @dev, @juridik or @trading." aria-controls="mention-list"></textarea>
+      <ul id="mention-list" class="team-mentions" role="listbox" aria-label="Mention an AI agent" hidden>
+        <% members.forEach(function(member) { if (member.type !== 'agent') return; %>
+          <li role="option" data-slug="<%= member.slug %>" aria-label="<%= member.name %>, AI-agent"><%= member.name %> <span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent">AI-agent</span></li>
+        <% }) %>
+      </ul>
+      <fieldset class="team-areas">
+        <legend>Legal areas</legend>
+        <% areas.forEach(function(area) { %>
+          <label class="team-check" for="area-<%= area.id %>">
+            <input id="area-<%= area.id %>" type="checkbox" name="legalTags" value="<%= area.label %>">
+            <span><%= area.label %></span>
+          </label>
+        <% }) %>
+      </fieldset>
+      <label for="contract-text">Contract text</label>
+      <textarea id="contract-text" name="contractText" maxlength="50000" rows="3" placeholder="Paste a contract or note for Juridik"></textarea>
+      <label for="contract-file">Contract file (.txt, .md, .pdf)</label>
+      <input id="contract-file" type="file" accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf">
+      <div class="ai-voice" id="ai-voice" role="dialog" aria-labelledby="ai-voice-title" aria-describedby="ai-voice-body" hidden>
+        <div class="ai-voice__icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        </div>
+        <div>
+          <h2 class="ai-voice__title" id="ai-voice-title">Du pratar med en AI-agent</h2>
+          <p id="ai-voice-body">Rösten du hör är <b class="ai-voice-name"><%= aiNameList %></b>, en AI-agent och inte en människa. Den handlar för <%= aiOrg %>. Samtalet spelas bara in om du har slagit på röstinspelning.</p>
+          <div class="ai-voice__meta">
+            <span class="ai-badge" role="status" aria-label="Det här är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span>
+            <span class="ai-chip" id="ai-voice-recording">Röstinspelning: av</span>
+          </div>
+        </div>
+        <div class="ai-voice__script" role="note" id="voice-disclosure-notice">
+          <strong>Uppläst manus (auditiv notis)</strong>
+          «<%= voiceDisclosure %>»
+          «<span id="ai-voice-script">Du pratar med en AI-agent. Rösten tillhör <%= aiNameList %>, som handlar för <%= aiOrg %>.</span>»
+        </div>
+        <p id="voice-cloud-notice"><%= sendsAudioToCloud ? voiceCloudNotice : voiceLocalNotice %></p>
+        <p id="voice-retention-notice"><%= voiceRetentionNotice %></p>
+        <label class="team-check" for="voice-ack">
+          <input id="voice-ack" type="checkbox" name="voiceAck">
+          <span>I understand that audio is sent to a cloud speech provider and that the raw recording is discarded.</span>
+        </label>
+        <div class="ai-voice__actions">
+          <button type="button" class="ai-btn ai-btn--primary" id="ai-voice-start">Starta samtal</button>
+          <button type="button" class="ai-btn ai-btn--secondary" id="ai-voice-cancel">Avbryt</button>
+          <button type="button" class="ai-btn ai-btn--ghost" id="ai-voice-consent">Ändra röstsamtycke</button>
+        </div>
+      </div>
+      <div class="ai-voice-live" id="ai-voice-live" role="status" aria-live="polite" hidden>
+        <span class="ai-voice-live__dot" aria-hidden="true"></span>
+        <span class="ai-voice-live__label">Live</span>
+        <span class="ai-voice-live__text">Samtal med AI-agent · <%= aiNameList %></span>
+      </div>
+      <div class="team-actions">
+        <button type="submit" class="tbtn tbtn-primary" id="send-message">Send</button>
+        <button type="button" class="tbtn tbtn-secondary" id="push-to-talk" aria-label="Hold to talk to an AI voice" aria-describedby="ai-voice voice-status"<%= voiceAvailable ? '' : ' disabled' %>>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>
+          Hold to talk
+        </button>
+      </div>
+      <p id="voice-status" class="team-voice-status"><% if (!voiceAvailable) { %><%= voiceNotice %><% } %></p>
+      <p id="team-form-error" class="team-error" role="alert" hidden></p>
+    </form>
+  </section>
+  <aside class="team-people" id="panel-people" role="tabpanel" aria-labelledby="tab-people">
+    <h2>People</h2>
+    <p class="team-example">Example agents · read-only</p>
+    <ul class="team-member-list">
+      <% members.forEach(function(member) { %>
+        <li class="team-member is-<%= member.type %> panel-<%= member.panel %>">
+          <div class="team-member-top">
+            <% if (member.type === 'agent') { %>
+              <span class="ai-avatar" aria-label="<%= member.name %>, AI-agent">
+                <span class="ai-avatar__fallback" aria-hidden="true"><%= member.name.charAt(0).toUpperCase() %></span>
+                <span class="ai-avatar__mark" aria-hidden="true">AI</span>
+                <span class="ai-sr-only">AI-agent</span>
+              </span>
+            <% } else { %>
+              <span class="team-avatar" aria-hidden="true"><%= member.name.charAt(0).toUpperCase() %></span>
+            <% } %>
+            <div>
+              <p class="team-member-name"><%= member.name %><% if (member.type === 'agent') { %> <span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span><% } %></p>
+              <p class="team-member-role"><%= member.type === 'agent' ? member.agentRole : member.role %></p>
+            </div>
+          </div>
+          <% if (member.type === 'agent' && member.panel === 'demo' && member.disclaimer) { %>
+            <p class="team-demo-banner"><%= member.disclaimer %></p>
+          <% } %>
+          <% if (member.type === 'agent' && member.panel === 'legal' && member.disclaimer) { %>
+            <p class="team-disclaimer"><%= member.disclaimer %></p>
+          <% } %>
+          <% if (member.type === 'agent' && member.panel !== 'demo') { %>
+            <p class="team-perm">Read-only · needs approval to act</p>
+          <% } %>
+          <% if (member.type === 'agent') { %>
+            <button type="button" class="tbtn tbtn-ghost team-turn" data-agent-id="<%= member.agentId %>" data-agent-name="<%= member.name %>">Give turn to <%= member.name %> · <%= aiAgentBadge %></button>
+          <% } %>
+        </li>
+      <% }) %>
+    </ul>
+  </aside>
+</div>
+<script id="team-data" type="application/json"><%- JSON.stringify(bootstrap).replace(/</g, '\\u003c') %></script>
+<script src="/js/team.js"></script>
+<%- include('partials/footer') %>

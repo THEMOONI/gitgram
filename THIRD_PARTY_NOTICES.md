@@ -1,10 +1,17 @@
 # Third-party notices
 
-Production dependencies of Gitgram, including transitive dependencies.
+Production dependencies of Gitgram, including transitive dependencies and the team-dashboard packages (`@langchain/langgraph` and `ws`).
 DevDependencies are omitted. Regenerate this file with `npm run licenses` after changing `package-lock.json`.
+Voice recordings are not a dependency: raw audio is transcribed in memory and discarded unless `TEAM_RETAIN_VOICE=1`.
 
 | Package | Version | License |
 | --- | --- | --- |
+| @langchain/langgraph | 1.4.18 | MIT |
+| @langchain/langgraph-checkpoint | 1.1.5 | MIT |
+| @langchain/langgraph-sdk | 1.12.0 | MIT |
+| @langchain/protocol | 0.0.19 | MIT |
+| @standard-schema/spec | 1.1.0 | MIT |
+| @types/json-schema | 7.0.15 | MIT |
 | accepts | 2.0.0 | MIT |
 | bcryptjs | 3.0.3 | BSD-3-Clause |
 | better-sqlite3 | 13.0.1 | MIT |
@@ -32,6 +39,7 @@ DevDependencies are omitted. Regenerate this file with `npm run licenses` after 
 | es-object-atoms | 1.1.2 | MIT |
 | escape-html | 1.0.3 | MIT |
 | etag | 1.8.1 | MIT |
+| eventemitter3 | 5.0.4 | MIT |
 | express | 5.2.1 | MIT |
 | express-session | 1.19.0 | MIT |
 | finalhandler | 2.1.1 | MIT |
@@ -47,6 +55,7 @@ DevDependencies are omitted. Regenerate this file with `npm run licenses` after 
 | iconv-lite | 0.7.3 | MIT |
 | inherits | 2.0.4 | ISC |
 | ipaddr.js | 1.9.1 | MIT |
+| is-network-error | 1.3.2 | MIT |
 | is-promise | 4.0.0 | MIT |
 | math-intrinsics | 1.1.0 | MIT |
 | media-typer | 1.1.1 | MIT |
@@ -63,6 +72,9 @@ DevDependencies are omitted. Regenerate this file with `npm run licenses` after 
 | on-finished | 2.4.1 | MIT |
 | on-headers | 1.1.0 | MIT |
 | once | 1.4.0 | ISC |
+| p-queue | 9.3.3 | MIT |
+| p-retry | 7.1.1 | MIT |
+| p-timeout | 7.0.2 | MIT |
 | parseurl | 1.3.3 | MIT |
 | path-to-regexp | 8.4.2 | MIT |
 | proxy-addr | 2.0.7 | MIT |
@@ -87,7 +99,9 @@ DevDependencies are omitted. Regenerate this file with `npm run licenses` after 
 | unpipe | 1.0.0 | MIT |
 | vary | 1.1.2 | MIT |
 | wrappy | 1.0.2 | ISC |
+| ws | 8.22.0 | MIT |
 
 ## License review
 
 No GPL, AGPL, LGPL, or unknown license was found in this production tree.
+No GPL or AGPL packages were found in the team-dashboard dependency tree or in the rest of the production tree.

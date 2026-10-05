@@ -91,8 +91,9 @@ function render(notices) {
   const lines = [
     '# Third-party notices',
     '',
-    'Production dependencies of Gitgram, including transitive dependencies.',
+    'Production dependencies of Gitgram, including transitive dependencies and the team-dashboard packages (`@langchain/langgraph` and `ws`).',
     'DevDependencies are omitted. Regenerate this file with `npm run licenses` after changing `package-lock.json`.',
+    'Voice recordings are not a dependency: raw audio is transcribed in memory and discarded unless `TEAM_RETAIN_VOICE=1`.',
     '',
     '| Package | Version | License |',
     '| --- | --- | --- |',
@@ -104,6 +105,7 @@ function render(notices) {
   lines.push('', '## License review', '');
   if (!flagged.length) {
     lines.push('No GPL, AGPL, LGPL, or unknown license was found in this production tree.');
+    lines.push('No GPL or AGPL packages were found in the team-dashboard dependency tree or in the rest of the production tree.');
   } else {
     lines.push('These packages need a human review before release:');
     lines.push('');
