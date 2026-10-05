@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "agents": "node agents/runner.js",
-    "test": "node --test"
+    "test": "node --test",
+    "licenses": "node scripts/third-party-notices.js"
   },
   "engines": {
     "node": ">=22"
