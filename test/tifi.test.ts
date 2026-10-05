@@ -608,3 +608,38 @@ test('treasury split and dashboard are paper only', async () => {
     ctx.close();
   }
 });
+
+test('POST /tifi/tigers/:id/backtest returns 200 with a fictional paper result', async () => {
+  const ctx = openDb();
+  try {
+    await seedDemo(ctx.db, {
+      username: 'tifi',
+      password: 'tifi-demo',
+      ownerPassword: 'tigerpapper-2026',
+      steps: 0,
+    });
+    const agent = request.agent(ctx.app);
+    const loginPage = await agent.get('/login').expect(200);
+    const loginToken = loginPage.text.match(/name="_csrf" value="([a-f0-9]+)"/);
+    assert.ok(loginToken);
+    await agent.post('/login').type('form').send({
+      username: 'tifi',
+      password: 'tifi-demo',
+      _csrf: loginToken[1],
+    }).expect(302);
+    const tiger = ctx.db.prepare('SELECT id, name FROM tifi_tigers WHERE slot = 1').get();
+    const form = await agent.get('/tifi/tigers').expect(200);
+    const token = form.text.match(/name="_csrf" value="([a-f0-9]+)"/);
+    assert.ok(token);
+    const res = await agent.post('/tifi/tigers/' + tiger.id + '/backtest').type('form').send({
+      _csrf: token[1],
+    });
+    assert.equal(res.status, 200);
+    assert.match(res.text, /Simulerat resultat för TIFI 1: -?\d+\.\d{2} %/);
+    assert.match(res.text, /Simulerat resultat/);
+    assert.match(res.text, /DEMO – inga riktiga pengar/);
+    assert.equal(res.text.includes('COINGECKO'), false);
+  } finally {
+    ctx.close();
+  }
+});

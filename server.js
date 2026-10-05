@@ -9,6 +9,7 @@ const { csrfProtection } = require('./lib/csrf');
 const { ensureLedgerSchema } = require('./lib/ledger');
 const { ensurePaperSchema } = require('./lib/paper/schema');
 const { ensureTifiSchema } = require('./lib/tifi/schema.ts');
+const { createDefaultFeed } = require('./lib/paper/feeds');
 
 const DEV_SESSION_SECRET = 'dev-only-insecure-session-secret';
 let warnedAboutSessionSecret = false;
@@ -126,7 +127,7 @@ function createApp(options = {}) {
   }));
   app.use('/', require('./routes/tifi.ts')(db, {
     dataDir,
-    priceFeed: options.priceFeed,
+    priceFeed: options.priceFeed || createDefaultFeed({}),
     clock: options.clock,
     autoRun: !!options.autoRunTifi,
   }));

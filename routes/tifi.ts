@@ -37,6 +37,9 @@ const { parseTigerSentence } = require('../lib/tifi/parser.ts') as { parseTigerS
 const setup = require('../lib/tifi/setup.ts') as any;
 const { runTigerBacktest } = require('../lib/tifi/backtest.ts') as { runTigerBacktest: (db: any, row: any, opts: any) => Promise<any> };
 const engine = require('../lib/paper/engine');
+const { createDefaultFeed } = require('../lib/paper/feeds') as {
+  createDefaultFeed: (env?: any, cache?: any) => any;
+};
 const { createWorldFeed } = require('../lib/tifi/world-feed.ts') as {
   createWorldFeed: (env?: any, opts?: any) => any;
 };
@@ -59,7 +62,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
   const express = require('express');
   const router = express.Router();
   const clock = options.clock || (() => new Date());
-  const feed = options.priceFeed;
+  const feed = options.priceFeed || createDefaultFeed({});
   if (options.autoRun) startScheduler(db, { feed, clock, tickMs: options.tickMs || 5000 });
 
   function requireUser(req: any, res: any, next: any) {
@@ -338,10 +341,13 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     try {
       const tiger = ownedTiger(req);
       const result = await runTigerBacktest(db, tiger, { feed, clock });
-      req.session.tifiFlash = {
-        ok: 'Simulerat resultat för ' + tiger.name + ': ' + result.percent.toFixed(2) + ' %. ' + SIMULATED_RESULT,
-      };
-      return req.session.save(() => res.redirect('/tifi/tigers'));
+      const message = 'Simulerat resultat för ' + tiger.name + ': ' + result.percent.toFixed(2) + ' %. ' + SIMULATED_RESULT;
+      return page(res.status(200), 'tifi/tigers', {
+        tigers: listTigers(db, req.tifiUser.id),
+        pending: req.session.tifiPending || null,
+        formError: null,
+        formOk: message,
+      });
     } catch (err) {
       return fail(req, res, err, next, '/tifi/tigers');
     }
