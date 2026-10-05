@@ -18,14 +18,14 @@ module.exports = function(db) {
   function gitAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Basic ')) {
-      res.setHeader('WWW-Authenticate', 'Basic realm="GITGRAM"');
+      res.setHeader('WWW-Authenticate', 'Basic realm="Scavvers"');
       return res.status(401).send('Authentication required');
     }
     const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
     const [username, password] = credentials.split(':');
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
     if (!user || !bcrypt.compareSync(password, user.password)) {
-      res.setHeader('WWW-Authenticate', 'Basic realm="GITGRAM"');
+      res.setHeader('WWW-Authenticate', 'Basic realm="Scavvers"');
       return res.status(401).send('Invalid credentials');
     }
     req.gitUser = user;
