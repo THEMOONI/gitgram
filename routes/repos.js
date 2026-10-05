@@ -1,19 +1,33 @@
 const express = require('express');
-const router = express.Router();
-const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { isValidUsername, isValidRepoName, isValidRef, isValidFilePath, resolveRepoPath } = require('../lib/validate');
+const { gitInitBare, hasHead, listTree, showFile, commitLog } = require('../lib/git');
 
-module.exports = function(db) {
+module.exports = function(db, options) {
+  const router = express.Router();
+  const dataDir = options.dataDir;
+
+  function notFound(res) {
+    return res.status(404).render('404', { title: 'Not Found - Scavvers' });
+  }
+
   function getRepo(req, res, next) {
     const { owner, repo } = req.params;
-    const repoData = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.full_name = ?`).get(owner + '/' + repo);
-    if (!repoData) return res.status(404).render('404', { title: 'Not Found - Scavvers' });
-    if (repoData.private && req.session.userId !== repoData.owner_id) {
-      return res.status(404).render('404', { title: 'Not Found - Scavvers' });
-    }
+    if (!isValidUsername(owner) || !isValidRepoName(repo)) return notFound(res);
+    const repoData = db.prepare(`
+      SELECT r.*, u.username as owner_name
+      FROM repositories r
+      JOIN users u ON r.owner_id = u.id
+      WHERE r.full_name = ?
+    `).get(owner + '/' + repo);
+    if (!repoData) return notFound(res);
+    if (repoData.private && req.session.userId !== repoData.owner_id) return notFound(res);
     req.repo = repoData;
     next();
+  }
+
+  function diskPath(repo) {
+    return resolveRepoPath(dataDir, repo.owner_name, repo.name);
   }
 
   router.get('/new', (req, res) => {
@@ -25,82 +39,117 @@ module.exports = function(db) {
     if (!req.session.userId) return res.redirect('/login');
     const { name, description, is_private } = req.body;
     const user = db.prepare('SELECT username FROM users WHERE id = ?').get(req.session.userId);
-    if (!name || name.trim().length === 0) {
+    const repoName = typeof name === 'string' ? name.trim() : '';
+    if (!repoName) {
       return res.render('new-repo', { title: 'New Repository - Scavvers', error: 'Name required' });
     }
-    const fullName = user.username + '/' + name.trim();
+    if (!isValidRepoName(repoName) || !isValidUsername(user.username)) {
+      return res.render('new-repo', { title: 'New Repository - Scavvers', error: 'Invalid repository name' });
+    }
+    const fullName = user.username + '/' + repoName;
     const existing = db.prepare('SELECT id FROM repositories WHERE full_name = ?').get(fullName);
     if (existing) {
       return res.render('new-repo', { title: 'New Repository - Scavvers', error: 'Repo already exists' });
     }
-    const repoPath = path.join(__dirname, '..', 'data', 'repos', user.username, name.trim());
-    fs.mkdirSync(repoPath, { recursive: true });
+    const repoPath = resolveRepoPath(dataDir, user.username, repoName);
+    if (!repoPath) {
+      return res.render('new-repo', { title: 'New Repository - Scavvers', error: 'Invalid repository name' });
+    }
     try {
-      execSync('git init --bare "' + repoPath + '"', { stdio: 'pipe' });
-      execSync('git --git-dir="' + repoPath + '" symbolic-ref HEAD refs/heads/main', { stdio: 'pipe' });
-      execSync('git --git-dir="' + repoPath + '" config http.receivepack true', { stdio: 'pipe' });
-      execSync('git --git-dir="' + repoPath + '" config http.uploadpack true', { stdio: 'pipe' });
-    } catch (e) {
+      fs.mkdirSync(repoPath, { recursive: true });
+      gitInitBare(repoPath);
+    } catch {
       return res.render('new-repo', { title: 'New Repository - Scavvers', error: 'Failed to create repo' });
     }
-    db.prepare('INSERT INTO repositories (name, full_name, description, owner_id, private) VALUES (?, ?, ?, ?, ?)').run(name.trim(), fullName, description || '', req.session.userId, is_private ? 1 : 0);
+    const descriptionText = typeof description === 'string' ? description : '';
+    db.prepare('INSERT INTO repositories (name, full_name, description, owner_id, private) VALUES (?, ?, ?, ?, ?)').run(
+      repoName,
+      fullName,
+      descriptionText,
+      req.session.userId,
+      is_private ? 1 : 0
+    );
     res.redirect('/' + fullName);
   });
 
   router.get('/:owner/:repo', getRepo, (req, res) => {
-    const repoPath = path.join(__dirname, '..', 'data', 'repos', req.params.owner, req.params.repo);
-    let files = [], commits = [], readme = null, hasCommits = false;
-    try {
-      const fileOutput = execSync('git --git-dir="' + repoPath + '" ls-tree --name-only HEAD 2>/dev/null || echo ""', { encoding: 'utf8', timeout: 5000 }).trim();
-      if (fileOutput) {
-        hasCommits = true;
-        fileOutput.split('\n').forEach(fn => {
-          try {
-            const type = execSync('git --git-dir="' + repoPath + '" ls-tree HEAD "' + fn + '" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
-            files.push({ name: fn, isDir: type.startsWith('040000') || type.startsWith('40000') });
-          } catch (e) { files.push({ name: fn, isDir: false }); }
-        });
-        const readmeName = files.find(f => /^readme/i.test(f.name));
-        if (readmeName) {
-          try { readme = execSync('git --git-dir="' + repoPath + '" show HEAD:"' + readmeName.name + '" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }); } catch (e) {}
-        }
-        try {
-          const co = execSync('git --git-dir="' + repoPath + '" log --oneline -10 2>/dev/null || echo ""', { encoding: 'utf8', timeout: 5000 }).trim();
-          if (co) commits = co.split('\n').map(l => { const m = l.match(/^([a-f0-9]+)\s+(.*)/); return m ? { hash: m[1], shortHash: m[1].substring(0,7), message: m[2] } : null; }).filter(Boolean);
-        } catch (e) {}
+    const repoPath = diskPath(req.repo);
+    let files = [];
+    let commits = [];
+    let readme = null;
+    let hasCommits = false;
+    if (repoPath && fs.existsSync(repoPath) && hasHead(repoPath)) {
+      hasCommits = true;
+      files = listTree(repoPath);
+      const readmeFile = files.find((file) => /^readme/i.test(file.name) && !file.isDir);
+      if (readmeFile) {
+        try { readme = showFile(repoPath, 'HEAD', readmeFile.name); } catch { readme = null; }
       }
-    } catch (e) { hasCommits = false; }
-    res.render('repo', { title: req.params.owner + '/' + req.params.repo + ' - Scavvers', repo: req.repo, files, commits, readme, hasCommits, isOwner: req.session.userId === req.repo.owner_id });
+      commits = commitLog(repoPath, 10).map((commit) => ({
+        hash: commit.hash,
+        shortHash: commit.shortHash,
+        message: commit.message,
+      }));
+    }
+    res.render('repo', {
+      title: req.repo.owner_name + '/' + req.repo.name + ' - Scavvers',
+      repo: req.repo,
+      files,
+      commits,
+      readme,
+      hasCommits,
+      isOwner: req.session.userId === req.repo.owner_id,
+    });
   });
 
   router.get('/:owner/:repo/blob/:ref/:filepath', getRepo, (req, res) => {
-    const repoPath = path.join(__dirname, '..', 'data', 'repos', req.params.owner, req.params.repo);
+    if (!isValidRef(req.params.ref) || !isValidFilePath(req.params.filepath)) {
+      return res.status(400).send('Invalid path');
+    }
+    const repoPath = diskPath(req.repo);
+    if (!repoPath) return notFound(res);
     let content = '';
-    try { content = execSync('git --git-dir="' + repoPath + '" show ' + req.params.ref + ':"' + req.params.filepath + '" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }); } catch (e) { return res.status(404).render('404', { title: 'Not Found' }); }
-    res.render('file-view', { title: req.params.filepath + ' - Scavvers', repo: req.repo, filepath: req.params.filepath, content, ref: req.params.ref, isOwner: req.session.userId === req.repo.owner_id });
+    try {
+      content = showFile(repoPath, req.params.ref, req.params.filepath);
+    } catch {
+      return notFound(res);
+    }
+    res.render('file-view', {
+      title: req.params.filepath + ' - Scavvers',
+      repo: req.repo,
+      filepath: req.params.filepath,
+      content,
+      ref: req.params.ref,
+      isOwner: req.session.userId === req.repo.owner_id,
+    });
   });
 
   router.get('/:owner/:repo/commits', getRepo, (req, res) => {
-    const repoPath = path.join(__dirname, '..', 'data', 'repos', req.params.owner, req.params.repo);
-    let commits = [];
-    try {
-      const co = execSync('git --git-dir="' + repoPath + '" log --format="%H|%an|%ae|%aI|%s" -50 2>/dev/null || echo ""', { encoding: 'utf8', timeout: 5000 }).trim();
-      if (co) commits = co.split('\n').map(l => { const p = l.split('|'); return { hash: p[0], shortHash: p[0].substring(0,7), author: p[1], email: p[2], date: p[3], message: p[4] }; });
-    } catch (e) {}
-    res.render('commits', { title: 'Commits - Scavvers', repo: req.repo, commits, isOwner: req.session.userId === req.repo.owner_id });
+    const repoPath = diskPath(req.repo);
+    const commits = repoPath && fs.existsSync(repoPath) ? commitLog(repoPath, 50) : [];
+    res.render('commits', {
+      title: 'Commits - Scavvers',
+      repo: req.repo,
+      commits,
+      isOwner: req.session.userId === req.repo.owner_id,
+    });
   });
 
   router.get('/:owner/:repo/settings', getRepo, (req, res) => {
-    if (req.session.userId !== req.repo.owner_id) return res.status(403).render('404', { title: 'Access Denied' });
+    if (req.session.userId !== req.repo.owner_id) {
+      return res.status(403).render('404', { title: 'Access Denied' });
+    }
     res.render('repo-settings', { title: 'Settings - Scavvers', repo: req.repo, success: null, error: null });
   });
 
   router.post('/:owner/:repo/settings/delete', getRepo, (req, res) => {
-    if (req.session.userId !== req.repo.owner_id) return res.status(403).render('404', { title: 'Access Denied' });
-    const repoPath = path.join(__dirname, '..', 'data', 'repos', req.params.owner, req.params.repo);
-    fs.rmSync(repoPath, { recursive: true, force: true });
+    if (req.session.userId !== req.repo.owner_id) {
+      return res.status(403).render('404', { title: 'Access Denied' });
+    }
+    const repoPath = diskPath(req.repo);
+    if (repoPath) fs.rmSync(repoPath, { recursive: true, force: true });
     db.prepare('DELETE FROM repositories WHERE id = ?').run(req.repo.id);
-    res.redirect('/@' + req.params.owner);
+    res.redirect('/@' + req.repo.owner_name);
   });
 
   return router;
