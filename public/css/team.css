@@ -110,7 +110,7 @@
   background: rgba(154, 140, 255, 0.08);
 }
 .team-msg.is-demo { border-color: rgba(255, 181, 71, 0.7); background: rgba(255, 181, 71, 0.06); }
-.team-msg-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; }
+.team-msg-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
 .team-author { font-weight: 650; }
 .team-ai-tag, .team-generated, .team-ai-badge {
   color: var(--iris); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em;
@@ -224,4 +224,14 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .team-app * { scroll-behavior: auto; }
+}
+
+.team-app .ai-first-overlay { overflow: auto; }
+
+.team-app .ai-voice[hidden],
+.team-app .ai-persistent[hidden],
+.team-app .ai-voice-banner[hidden],
+.team-app .ai-voice-live[hidden],
+.team-app .ai-first-overlay[hidden] {
+  display: none;
 }
