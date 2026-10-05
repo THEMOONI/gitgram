@@ -142,7 +142,7 @@ Follow-ups: changing who can see `#trading`, forwarding alerts, or publishing th
 
 ## Security
 
-Report vulnerabilities privately. The contact address and disclosure timings are in [SECURITY.md](SECURITY.md). The owner still has to fill in the placeholder address.
+Report vulnerabilities privately through GitHub private vulnerability reporting: [Report a vulnerability](https://github.com/THEMOONI/gitgram/security/advisories/new). Do not open a public issue for a vulnerability. Acknowledgement and remediation commitments are in [SECURITY.md](SECURITY.md).
 
 ## License
 
