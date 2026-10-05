@@ -68,9 +68,9 @@ app.use('/api', apiRoutes);
 
 app.get('/', (req, res) => {
   const repos = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.private = 0 ORDER BY r.updated_at DESC LIMIT 20`).all();
-  res.render('index', { title: 'GITGRAM - Your Own Git Platform', repos });
+  res.render('index', { title: 'Scavvers - Your Own Git Platform', repos });
 });
 
 app.listen(PORT, () => {
-  console.log('🚀 GITGRAM running on http://localhost:' + PORT);
+  console.log('🚀 Scavvers running on http://localhost:' + PORT);
 });
