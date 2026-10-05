@@ -465,12 +465,16 @@ function initTeam(doc) {
         talk.dataset.recording = '1';
         talk.setAttribute('aria-pressed', 'true');
         active = { stream, recorder, chunks, stopped };
+        rootDoc.addEventListener('pointerup', stop);
+        rootDoc.addEventListener('pointercancel', stop);
       } catch {
         talk.disabled = true;
         if (status) status.textContent = bootstrap.micNotice;
       }
     }
     async function stop() {
+      rootDoc.removeEventListener('pointerup', stop);
+      rootDoc.removeEventListener('pointercancel', stop);
       if (!active) return;
       const current = active;
       active = null;
