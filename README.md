@@ -90,6 +90,8 @@ Strategy B in the strategy notes asks for 10 trades a day and a 25% stop. The en
 
 `npm run tifi:backtest` runs TIFI 1, TIFI 2 and TIFI 3 on the fictional synthetic feed. It does not read an API key. The default window is 90 daily bars on BTC, ETH and SOL. Override it with `npm run tifi:backtest -- --symbols=BTC,ETH --days=90`. Each tiger prints a simulated return, a max drawdown, and a trade count. Those figures are a paper replay, not a forecast and not a claim of returns.
 
+TIFI 1–3 disclose in the first decision of each session that they are AI agents acting for Scavvers Labs. Decision cards show `AI-beslut · Demo med låtsaspengar · Ingen finansiell rådgivning` as visible text. TIFI has no speech path. See `docs/TIFI.md`.
+
 ### Market data
 
 `PriceFeed` is a swappable adapter. The default is the fictional series. Set `COINGECKO_API_KEY` to use CoinGecko (crypto only: BTC, ETH, SOL, BNB, XRP). The key is sent as a header, never in the URL, and it is never stored in the repo. Each install brings its own key. When that feed is active the UI shows both “Powered by CoinGecko” and “Data provided by CoinGecko”.

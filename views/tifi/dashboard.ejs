@@ -69,6 +69,7 @@
   </div>
   <div class="dec">
     <div class="dh"><span class="tifi-card__title">Senaste beslut</span><span class="tifi-mono tifi-muted" style="font-size:11px">sim</span></div>
+    <p class="tifi-ai-reminder"><%= aiReminder %></p>
     <% tiger.decision.bars.forEach(function (bar) { %>
     <div class="row<%= bar.on ? '' : ' dim' %>"><b><%= bar.label %></b><div class="tifi-bar"><i style="width:<%= bar.pct %>%"></i></div><span><%= bar.pct %> %</span></div>
     <% }) %>
@@ -109,6 +110,7 @@
       <% board.feed.forEach(function (item) { %>
       <div class="fe" style="--acc:<%= item.accent %>">
         <div class="r"><i></i><span class="who"><%= item.tiger %></span><span class="act"><%= item.action %></span><span class="m"><span class="p"><%= item.pct %></span></span></div>
+        <p class="tifi-ai-reminder"><%= aiReminder %></p>
         <div class="note"><%= item.rationale %></div>
       </div>
       <% }) %>

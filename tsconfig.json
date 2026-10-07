@@ -12,5 +12,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["lib/tifi/**/*.ts", "routes/tifi.ts", "test/tifi.test.ts"]
+  "include": ["lib/tifi/**/*.ts", "routes/tifi.ts", "test/tifi.test.ts", "test/tifi-ai.test.ts"]
 }

@@ -479,6 +479,7 @@ function loadBoard(db: any, userId: number, env?: Record<string, string | undefi
       const pct = Math.round(Number(raw || 0) * 100);
       return {
         id: row.id,
+        tigerId: row.tiger_id,
         tiger: row.tiger_name,
         slot,
         accent: 'var(--tifi-t' + slot + ')',

@@ -47,6 +47,8 @@ npm run tifi:demo
 
 `/tifi` visar kassan, TIFI 1–3, beslut och en intern topplista i procent. `/bots` pekar om till `/tifi` och kräver samma inloggning. `/tifi/setup` är installningen för ett nytt konto. `/tifi/tigers` skapar en tiger från en mening.
 
+TIFI 1, TIFI 2 och TIFI 3 är AI-agenter som agerar för Scavvers Labs räkning. Första beslutet i varje session börjar med den meningen, tillagd på servern efter att svaret faktiskt skickats. Avbryts svaret innan dess sägs meningen igen nästa gång. Varje beslutskort, och sessionstarten på `/bots` (via `/tifi`) och `/tifi/tigers`, visar texten `AI-beslut · Demo med låtsaspengar · Ingen finansiell rådgivning`. Den sitter i sidan, inte i en tooltip. Frågar man om agenten är en människa svarar den att den är en AI. TIFI har ingen röstväg: ingen taligenkänning, ingen talsyntes, ingen röstidentifiering och ingen kloning. Kryssrutan för röstinspelning sparar bara ett sessionsval och spelar inte in ljud.
+
 Hävstång över 1× avvisas. Effektiv hävstång på papper är 1×. Pappersboken har ingen marginal, och `marginMultiplier()` i `lib/tifi/guard.ts` stannar på 1.
 
 Varje position är högst 10 % av lek-kassan (portföljvärdet). En tiger får ha högst 3 öppna innehav. Vid 20 % värdeminskning från topp-equity pausar kill switchen nya öppningar tills ägaren återställer portföljen.

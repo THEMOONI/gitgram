@@ -13,7 +13,12 @@ interface SignalLike {
   strength: number;
   stopPct: number;
   note: string;
+  agentName?: string;
 }
+
+const { enforceTruthfulIdentity } = require('./disclosure.ts') as {
+  enforceTruthfulIdentity: (parentBody: string, replyBody: string, name: string) => string;
+};
 
 interface LimitsLike {
   maxPositionPct: number;
@@ -60,6 +65,8 @@ function distribution(action: 'buy' | 'sell' | 'hold', strength: number): Probab
   return { buy, sell, hold };
 }
 
+const IDENTITY_RULE = 'Om du får frågan "är du en människa?" eller "are you human?", svara alltid sanningsenligt att du är en AI-agent som agerar för Scavvers Labs räkning. Påstå aldrig att du är en människa.';
+
 function rationaleFor(signal: SignalLike, action: 'buy' | 'sell' | 'hold'): string {
   const symbol = signal.symbol || 'listan';
   const what = action === 'buy'
@@ -67,8 +74,9 @@ function rationaleFor(signal: SignalLike, action: 'buy' | 'sell' | 'hold'): stri
     : action === 'sell'
       ? 'stänga en simulerad position'
       : 'avvakta';
-  return 'Lokal modell, pappersläge. Signal för ' + symbol + ': ' + signal.note
+  const local = 'Lokal modell, pappersläge. Signal för ' + symbol + ': ' + signal.note
     + ' Föreslagen simulerad åtgärd: ' + what + '. Detta är ingen rekommendation och inget löfte om avkastning.';
+  return enforceTruthfulIdentity(signal.note, local, signal.agentName || 'TIFI');
 }
 
 function createFakeModel(): { id: string; propose: (signal: SignalLike, limits: LimitsLike) => Promise<Proposal> } {
@@ -130,7 +138,7 @@ function createOpenAiModel(options: {
             messages: [
               {
                 role: 'system',
-                content: 'Svara bara med JSON. Du simulerar pappershandel. Nycklar: action (buy, sell eller hold), leverage (alltid 1), rationale (kort, inte rådgivning).',
+                content: 'Svara bara med JSON. Du simulerar pappershandel. Nycklar: action (buy, sell eller hold), leverage (alltid 1), rationale (kort, inte rådgivning). ' + IDENTITY_RULE,
               },
               {
                 role: 'user',
@@ -162,8 +170,12 @@ function createOpenAiModel(options: {
           notionalPct: action === 'buy' ? limits.maxPositionPct : null,
           stopLossPct: action === 'buy' ? limits.maxStopPct : null,
           leverage: 1,
-          rationale: 'Nätverksmodell, pappersläge. ' + String(parsed.rationale || signal.note).slice(0, 400)
+          rationale: enforceTruthfulIdentity(
+          signal.note,
+          'Nätverksmodell, pappersläge. ' + String(parsed.rationale || signal.note).slice(0, 400)
             + ' Detta är ingen rekommendation.',
+          signal.agentName || 'TIFI',
+        ),
           probabilities: distribution(action, signal.strength || 0.5),
           modelId: 'openai',
           modelCostMicro: costMicro,
@@ -186,6 +198,7 @@ function createDecisionModel(env: Record<string, string | undefined> | null | un
 
 module.exports = {
   distribution,
+  IDENTITY_RULE,
   createFakeModel,
   createOpenAiModel,
   createDecisionModel,
