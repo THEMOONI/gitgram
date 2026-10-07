@@ -46,6 +46,22 @@ const { createWorldFeed } = require('../lib/tifi/world-feed.ts') as {
 const { markOpenToFeed } = require('../lib/tifi/world-venue.ts') as {
   markOpenToFeed: (db: any, userId: number, markets: any[]) => void;
 };
+const {
+  DECISION_REMINDER,
+  DisclosureLedger,
+  deliverDisclosedReply,
+  presentSessionBoard,
+  commitDisclosure,
+} = require('../lib/tifi/disclosure.ts') as {
+  DECISION_REMINDER: string;
+  DisclosureLedger: new () => {
+    has: (sessionId: string, agentKey: string) => boolean;
+    mark: (sessionId: string, agentKey: string) => void;
+  };
+  deliverDisclosedReply: (args: any) => Promise<any>;
+  presentSessionBoard: (board: any, ledger: any, sessionId: string) => string[];
+  commitDisclosure: (res: any, ledger: any, sessionId: string, keys: string[]) => void;
+};
 
 function envelope(body: any): any {
   return {
@@ -62,6 +78,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
   const express = require('express');
   const router = express.Router();
   const clock = options.clock || (() => new Date());
+  const ledger = options.disclosureLedger || new DisclosureLedger();
   const feed = options.priceFeed || createDefaultFeed({});
   if (options.autoRun) startScheduler(db, { feed, clock, tickMs: options.tickMs || 5000 });
 
@@ -98,8 +115,16 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
       notice: DEMO_NOTICE,
       simulatedLabel: SIMULATED_RESULT,
       navTifi: true,
+      aiReminder: DECISION_REMINDER,
       ...model,
     });
+  }
+
+  function withDisclosure(req: any, res: any, board: any): any {
+    const pending = presentSessionBoard(board, ledger, req.sessionID);
+    commitDisclosure(res, ledger, req.sessionID, pending);
+    board.aiReminder = DECISION_REMINDER;
+    return board;
   }
 
   async function boardFor(userId: number): Promise<any> {
@@ -126,7 +151,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
   router.get('/tifi/api/state', requireUser, async (req: any, res: any) => {
     const row = setup.setupRow(db, req.tifiUser.id);
     if (!row || !row.finished_at) return res.status(409).json(envelope({ error: 'setup', message: 'Installningen är inte klar.' }));
-    res.json(envelope({ board: await boardFor(req.tifiUser.id) }));
+    res.json(envelope({ board: withDisclosure(req, res, await boardFor(req.tifiUser.id)), aiReminder: DECISION_REMINDER }));
   });
 
   router.get('/tifi/events', requireUser, (req: any, res: any) => {
@@ -136,10 +161,57 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
       Connection: 'keep-alive',
     });
     res.flushHeaders();
-    res.write('data: ' + JSON.stringify({ type: 'hello', notice: DEMO_NOTICE, simulated: true }) + '\n\n');
+    res.write('data: ' + JSON.stringify({
+      type: 'hello',
+      notice: DEMO_NOTICE,
+      simulated: true,
+      aiReminder: DECISION_REMINDER,
+    }) + '\n\n');
     const off = subscribe((event) => {
       if (event.userId !== req.tifiUser.id) return;
-      res.write('data: ' + JSON.stringify({ ...event, notice: DEMO_NOTICE, simulated: true }) + '\n\n');
+      if (event.type !== 'decision') {
+        try {
+          res.write('data: ' + JSON.stringify({ ...event, notice: DEMO_NOTICE, simulated: true, aiReminder: DECISION_REMINDER }) + '\n\n');
+        } catch {
+          // A closed stream is ignored. The disclosure ledger stays unmarked.
+        }
+        return;
+      }
+      const name = event.tigerName || 'TIFI';
+      deliverDisclosedReply({
+        ledger,
+        sessionId: req.sessionID,
+        agentKey: 'tiger:' + event.tigerId,
+        agentName: name,
+        write: async (chunk: { type: string; text: string }) => {
+          if (res.destroyed || res.writableEnded) {
+            const error = new Error('stream broken') as Error & { code: string };
+            error.code = 'STREAM_BROKEN';
+            throw error;
+          }
+          const payload = chunk.type === 'disclosure'
+            ? {
+              type: 'ai_disclosure',
+              text: chunk.text,
+              tigerId: event.tigerId,
+              tiger: name,
+              notice: DEMO_NOTICE,
+              simulated: true,
+              aiReminder: DECISION_REMINDER,
+            }
+            : {
+              ...event,
+              rationale: chunk.text,
+              notice: DEMO_NOTICE,
+              simulated: true,
+              aiReminder: DECISION_REMINDER,
+            };
+          res.write('data: ' + JSON.stringify(payload) + '\n\n');
+        },
+        model: async () => publicText(event.rationale, process.env),
+      }).catch(() => {
+        // Write failed before the ledger mark, or the model step failed after it.
+      });
     });
     const beat = setInterval(() => res.write(': ping\n\n'), 15000);
     req.on('close', () => {
@@ -239,7 +311,7 @@ module.exports = function tifiRoutes(db: any, options: any = {}) {
     if (!row || !row.finished_at) return res.redirect('/tifi/setup');
     const note = flash(req);
     page(res, 'tifi/dashboard', {
-      board: await boardFor(req.tifiUser.id),
+      board: withDisclosure(req, res, await boardFor(req.tifiUser.id)),
       formError: note && note.error,
       formOk: note && note.ok,
       username: req.tifiUser.username,

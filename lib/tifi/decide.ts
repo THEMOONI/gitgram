@@ -10,6 +10,9 @@ const { selectSignal } = require('./strategies.ts') as { selectSignal: (...args:
 const { limitsOf } = require('./treasury.ts') as { limitsOf: (config: any) => any };
 const { publish } = require('./events.ts') as { publish: (event: any) => void };
 const { utcDay } = require('./errors.ts') as { utcDay: (value: string) => string };
+const { enforceTruthfulIdentity } = require('./disclosure.ts') as {
+  enforceTruthfulIdentity: (parentBody: string, replyBody: string, name: string) => string;
+};
 
 function tigerLimits(row: any): any {
   return limitsOf({
@@ -81,10 +84,12 @@ function logDecision(db: any, row: any): string {
     row.modelCostMicro || 0,
     hash,
   );
+  const named = db.prepare('SELECT name FROM tifi_tigers WHERE id = ?').get(row.tigerId) as { name?: string } | undefined;
   publish({
     type: 'decision',
     userId: row.userId,
     tigerId: row.tigerId,
+    tigerName: named && named.name ? named.name : 'TIFI',
     verdict: row.verdict,
     rationale: row.rationale,
     ts: row.ts,
@@ -141,10 +146,11 @@ async function decideTiger(db: any, tiger: any, args: {
   const scoped: Record<string, any[]> = {};
   for (const symbol of limits.symbols) scoped[symbol] = args.series[symbol] || [];
   const signal = selectSignal(tiger.strategy, scoped, params, held);
-  const proposal = await args.model.propose(signal, {
+  const proposal = await args.model.propose({ ...signal, agentName: tiger.name }, {
     maxPositionPct: limits.maxPositionPct,
     maxStopPct: limits.maxStopPct,
   });
+  proposal.rationale = enforceTruthfulIdentity(signal.note, proposal.rationale, tiger.name);
   if (pauseReason === 'daily_loss' && proposal.action !== 'hold') {
     proposal.action = 'hold';
     proposal.notionalPct = null;

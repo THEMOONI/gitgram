@@ -21,6 +21,9 @@ const { marketCopy, neutralLabels } = require('./labels.ts') as {
   marketCopy: (env?: Record<string, string | undefined>) => { rationaleSuffix: string };
   neutralLabels: (env?: Record<string, string | undefined>) => boolean;
 };
+const { enforceTruthfulIdentity } = require('./disclosure.ts') as {
+  enforceTruthfulIdentity: (parentBody: string, replyBody: string, name: string) => string;
+};
 
 function tigerLimits(row: any): any {
   return limitsOf({
@@ -101,9 +104,10 @@ async function decideWorldTiger(db: any, tiger: any, args: {
   const params = { ...JSON.parse(tiger.params_json || '{}'), stopPct: limits.maxStopPct };
   const signal = selectSignal(tiger.strategy, { [underlying]: args.bars || [] }, params, []);
   const modelProposal = await args.model.propose(
-    { ...signal, symbol: underlying },
+    { ...signal, symbol: underlying, agentName: tiger.name },
     { maxPositionPct: limits.maxPositionPct, maxStopPct: limits.maxStopPct },
   );
+  modelProposal.rationale = enforceTruthfulIdentity(signal.note, modelProposal.rationale, tiger.name);
   const held = market
     ? venue.openPosition(db, tiger.id, market.id, 'YES') || venue.openPosition(db, tiger.id, market.id, 'NO')
     : null;
