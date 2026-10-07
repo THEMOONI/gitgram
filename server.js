@@ -13,6 +13,8 @@ const { createTeamService } = require('./lib/team/service');
 const { createHub, attachTeamRealtime } = require('./lib/team/realtime');
 const { createRateLimiter } = require('./lib/team/ratelimit');
 const { createVoiceProvider, voiceRetentionEnabled } = require('./lib/team/voice');
+const { DisclosureLedger } = require('./lib/team/ai-disclosure');
+const { createVoiceRetention } = require('./lib/team/voice-retention');
 const { createWatcherClient, watcherOrigin } = require('./lib/team/trading/watcher');
 const mountTeam = require('./routes/team');
 
@@ -118,11 +120,14 @@ function createApp(options = {}) {
     streamConnected: false,
   };
   const hub = createHub();
+  const disclosureLedger = options.ledger || new DisclosureLedger();
+  const voiceRetention = createVoiceRetention(db, dataDir);
   const teamService = createTeamService(db, {
     config: teamConfig,
     dataDir,
     maxHops,
     hub,
+    ledger: disclosureLedger,
     ownerUsername,
     excludeFile: tradingExcludeFile,
     minLiquidityUsd,
@@ -172,6 +177,9 @@ function createApp(options = {}) {
   app.locals.teamMessageLimiter = messageLimiter;
   app.locals.voice = voice;
   app.locals.retainVoiceAudio = retainVoiceAudio;
+  app.locals.disclosureLedger = disclosureLedger;
+  app.locals.voiceRetention = voiceRetention;
+  app.locals.clearVoiceSession = (sessionId) => voiceRetention.endSession(sessionId);
   app.locals.sessionMiddleware = sessionMiddleware;
   app.locals.attachRealtime = (server) => attachTeamRealtime(server, app);
 
@@ -213,6 +221,8 @@ function createApp(options = {}) {
     flagLimiter,
     tradingAlertsToken,
     tradingLimiter,
+    voiceRetention,
+    ledger: disclosureLedger,
   });
   app.use('/', require('./routes/repos')(db, { dataDir }));
   app.use('/api', require('./routes/api')(db));

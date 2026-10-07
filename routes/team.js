@@ -2,6 +2,8 @@ const express = require('express');
 const { bearerToken, tokensEqual } = require('../lib/team/secret');
 const { validateFlagInput } = require('../lib/team/flags');
 const { voiceNotice, spokenText, discardAudio, retainAudioFile, markGeneratedAudio } = require('../lib/team/voice');
+const { voiceIntro, TRADING_REMINDER } = require('../lib/team/ai-disclosure');
+const { assertNotCloneRequest, safeVoiceLog, CONSENT_TEXT } = require('../lib/team/voice-policy');
 
 function wantsJson(req) {
   return (req.get('content-type') || '').includes('application/json');
@@ -49,7 +51,7 @@ function fileFromBody(body) {
 function mountTeam(app, deps) {
   const {
     service, voice, config, flagsToken, messageLimiter, flagLimiter, dataDir, retainVoiceAudio,
-    tradingAlertsToken, tradingLimiter,
+    tradingAlertsToken, tradingLimiter, voiceRetention, ledger,
   } = deps;
   const pages = express.Router();
   const api = express.Router();
@@ -83,6 +85,7 @@ function mountTeam(app, deps) {
   pages.get('/:slug', (req, res) => {
     if (!req.session.userId) return res.redirect('/login');
     service.ensureUserLobby(req.session.userId);
+    service.noteSession(req.session.userId, req.sessionID);
     const access = service.requireUserRoom(req.params.slug, req.session.userId);
     if (!access.ok) {
       if (access.status === 403) return res.status(403).send('You are not a member of this room');
@@ -110,6 +113,9 @@ function mountTeam(app, deps) {
       voiceLocalNotice: config.voiceLocalNotice,
       voiceRetentionNotice: retainVoiceAudio ? config.voiceRetentionOnNotice : config.voiceRetentionNotice,
       voiceDisclosure: config.voiceDisclosure,
+      voiceMicExplain: config.voiceMicExplain,
+      voiceRecordConsent: CONSENT_TEXT,
+      tradingAiReminder: TRADING_REMINDER,
       aiAgentBadge: config.aiAgentBadge,
       aiGeneratedLabel: config.aiGeneratedLabel,
       retainVoiceAudio: Boolean(retainVoiceAudio),
@@ -135,6 +141,10 @@ function mountTeam(app, deps) {
         voiceCloudNotice: config.voiceCloudNotice,
         voiceLocalNotice: config.voiceLocalNotice,
         voiceDisclosure: config.voiceDisclosure,
+        voiceMicExplain: config.voiceMicExplain,
+        voiceRecordConsent: CONSENT_TEXT,
+        tradingAiReminder: TRADING_REMINDER,
+        aiOrg: 'Scavvers Labs',
         aiAgentBadge: config.aiAgentBadge,
         aiGeneratedLabel: config.aiGeneratedLabel,
         maxUploadBytes: config.maxUploadBytes,
@@ -262,6 +272,7 @@ function mountTeam(app, deps) {
       addressedAgentId: req.body?.addressedAgentId,
       contractText: req.body?.contractText,
       file: uploaded.file,
+      sessionId: req.sessionID,
     });
     if (!result.ok) return res.status(result.status).json({ error: result.error });
     return res.status(201).json({ message: result.message });
@@ -283,12 +294,33 @@ function mountTeam(app, deps) {
     const audio = Buffer.isBuffer(req.body) ? Buffer.from(req.body) : Buffer.alloc(0);
     if (!audio.length) return res.status(400).json({ error: 'audio' });
     try {
+      try {
+        assertNotCloneRequest({ path: req.path, fields: {}, sample: req.query.clone === '1' ? true : null });
+      } catch (error) {
+        return res.status(400).json({ error: 'voice_clone_rejected', message: error.message });
+      }
       const transcript = await voice.transcribe(audio, req.get('content-type'));
       if (!transcript.text) return res.status(400).json({ error: 'audio' });
-      if (retainVoiceAudio) retainAudioFile(dataDir, audio, req.get('content-type'));
-      const result = service.postUserMessage(req.session.userId, req.params.slug, { body: transcript.text });
+      const recordRequested = req.get('x-voice-record') === '1';
+      let recordingId = null;
+      if (retainVoiceAudio && recordRequested && voiceRetention && voiceRetention.consentAllowsRecording(req.session.userId)) {
+        const file = retainAudioFile(dataDir, audio, req.get('content-type'));
+        const consent = voiceRetention.latestConsent(req.session.userId);
+        recordingId = voiceRetention.storeRecording(req.session.userId, file, consent && consent.id).id;
+      }
+      if (voiceRetention) voiceRetention.rememberTranscript(req.sessionID, req.session.userId, transcript.text);
+      safeVoiceLog(() => {}, { type: 'stt', userId: req.session.userId, bytes: audio.length });
+      const result = service.postUserMessage(req.session.userId, req.params.slug, {
+        body: transcript.text,
+        sessionId: req.sessionID,
+      });
       if (!result.ok) return res.status(result.status).json({ error: result.error });
-      return res.status(201).json({ transcript: transcript.text, message: result.message });
+      return res.status(201).json({
+        transcript: transcript.text,
+        message: result.message,
+        recordingId,
+        recorded: Boolean(recordingId),
+      });
     } catch (error) {
       if (error.code === 'VOICE_UNAVAILABLE') {
         return res.status(503).json({ error: 'voice_unavailable', message: voiceNotice(config) });
@@ -309,13 +341,16 @@ function mountTeam(app, deps) {
     const found = service.messageForMember(req.session.userId, Number(req.params.id));
     if (!found.ok) return res.status(found.status).json({ error: found.error });
     try {
-      const disclose = !req.session.voiceDisclosurePlayed;
+      const callId = typeof req.query.call === 'string' ? req.query.call.replace(/[^\w:-]/g, '').slice(0, 64) : '';
+      const agentKey = found.message.agentSlug || found.message.authorName || 'agent';
+      const voiceKey = callId ? `voice:${agentKey}:${callId}` : `voice:${agentKey}`;
+      const sessionId = req.sessionID;
+      const disclose = !(ledger && ledger.has(sessionId, voiceKey));
       const text = spokenText(found.message.body, {
         disclose,
-        disclosure: config.voiceDisclosure,
+        disclosure: voiceIntro(found.message.authorName),
       });
       const spoken = await voice.synthesize(text);
-      if (disclose) req.session.voiceDisclosurePlayed = true;
       const audio = markGeneratedAudio(spoken.audio, spoken.contentType, {
         provider: voice.name,
         model: voice.model,
@@ -326,6 +361,16 @@ function mountTeam(app, deps) {
       res.set('X-Gitgram-Ai-Disclosure', disclose ? '1' : '0');
       res.set('X-Content-Type-Options', 'nosniff');
       res.set('Cache-Control', 'private, no-store');
+      let sent = false;
+      res.on('finish', () => {
+        sent = true;
+        if (disclose && ledger) ledger.mark(sessionId, voiceKey);
+      });
+      res.on('close', () => {
+        if (!sent && ledger) {
+          /* disclosure was not delivered; the next clip of this call still says it */
+        }
+      });
       return res.send(audio);
     } catch (error) {
       if (error.code === 'VOICE_UNAVAILABLE') {
@@ -333,6 +378,49 @@ function mountTeam(app, deps) {
       }
       return res.status(502).json({ error: 'voice_failed' });
     }
+  });
+
+  api.post('/voice-consent', (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
+    if (!voiceRetention) return res.status(503).json({ error: 'voice_unavailable' });
+    const granted = req.body?.granted === true || req.body?.granted === 'true' || req.body?.granted === '1';
+    const row = voiceRetention.logConsent(req.session.userId, granted);
+    return res.status(201).json({
+      consent: {
+        id: row.id,
+        userId: row.userId,
+        granted: row.granted,
+        textVersion: row.textVersion,
+        createdAt: row.createdAt,
+      },
+    });
+  });
+
+  api.get('/voice-recordings', (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
+    if (!voiceRetention) return res.json({ recordings: [] });
+    return res.json({ recordings: voiceRetention.listRecordings(req.session.userId) });
+  });
+
+  api.delete('/voice-recordings/:id', (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
+    if (!voiceRetention) return res.status(404).json({ error: 'not_found' });
+    const removed = voiceRetention.deleteRecording(req.session.userId, Number(req.params.id));
+    if (!removed) return res.status(404).json({ error: 'not_found' });
+    return res.json({ ok: true });
+  });
+
+  api.delete('/voice-recordings', (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'unauthorized' });
+    if (!voiceRetention) return res.json({ removed: 0 });
+    return res.json({ removed: voiceRetention.deleteAll(req.session.userId) });
+  });
+
+  api.post('/voice-clone', (req, res) => {
+    return res.status(400).json({
+      error: 'voice_clone_rejected',
+      message: 'Voice cloning and voice-sample uploads are rejected. Milad\'s voice cannot be cloned.',
+    });
   });
 
   api.post('/approvals/:id', (req, res) => {

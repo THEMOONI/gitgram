@@ -27,7 +27,7 @@ That runs `node --test`.
 
 ## Team
 
-`/team` is a login-only room for the owner and read-only agents. Seeded rooms are `#general`, `#juridik`, and `#trading`. Seeded agents are Dev, Designer, Researcher, Juridik, and Trading. Agents reply only when they are @mentioned or given the turn. A reply can @mention at most the hop limit (default 3). Each agent has a daily token and cost cap.
+`/team` is a login-only room for the owner and read-only agents. Seeded rooms are `#general`, `#juridik`, and `#trading`. Seeded agents are Jarvis, Dev, Designer, Researcher, Juridik, and Trading. Agents reply only when they are @mentioned or given the turn. A reply can @mention at most the hop limit (default 3). Each agent has a daily token and cost cap. What the agents can and cannot do is written up in [docs/AI-kunnighet.md](docs/AI-kunnighet.md).
 
 Juridik reviews pasted text and `.txt`, `.md`, and `.pdf` uploads. It tags legal areas and can mark a matter as needing a real lawyer. Trading is a paper-trading demo with amber styling. It does not place orders.
 
@@ -37,9 +37,13 @@ Every agent is labeled **AI-agent** on its avatar, in the member list, in @menti
 
 The team room uses the scoped stylesheet `public/css/ai-markning.css` (`--ai-*` tokens, classes under `.ai-mark`). No global stylesheet is changed.
 
-At the start of every browser session, `.ai-first` (`role="alertdialog"`) says "Du interagerar med en AI-agent" and names each agent. It stays until the user chooses "Jag förstår". Escape and clicks outside do not dismiss it. After that, `.ai-persistent` stays visible for the session. Avatars use `.ai-avatar` with the text mark "AI", and names use `.ai-badge` with the accessible name "Det här är en AI-agent".
+At the start of every browser session, `.ai-first` (`role="alertdialog"`) says "Du interagerar med en AI-agent", names each agent, and says they act on behalf of Scavvers Labs. It stays until the user chooses "Jag förstår". Escape and clicks outside do not dismiss it. After that, `.ai-persistent` stays visible for the session. Avatars use `.ai-avatar` with the text mark "AI", and names use `.ai-badge` with the accessible name "Det här är en AI-agent".
 
-Before each voice call, `.ai-voice` shows the notice and the script. During the call, `.ai-voice-live` and `.ai-voice-banner` stay visible. The first spoken clip in a login session says exactly: Du pratar med en AI-röst.
+The server prepends the first reply from each agent in a session, even if the model omits it: "Hej, jag är <agent>, en AI-agent som agerar för Scavvers Labs räkning." That mark is stored only after the disclosure was actually sent. A cancel, an interrupt, a broken stream, a model error, or a socket reconnect does not skip it: either this reply already carried it, or the next one does. If someone asks "är du en människa?" or "are you human?", the server replaces a false claim with a truthful answer that the speaker is an AI.
+
+In `#trading`, the visible line "AI-agent · Demo · Ingen finansiell rådgivning" is shown at session start and on the trading cards. It is text, not a tooltip.
+
+Before each voice call, `.ai-voice` shows the notice and the script, including a short explanation before the browser asks for the microphone. During the call, `.ai-voice-live` and `.ai-voice-banner` stay visible. The first spoken clip of each call is: "Du pratar med en AI-röst. Jag är <agent> och agerar för Scavvers Labs räkning." A failed or cancelled clip does not count as delivered.
 
 `.ai-content` is for published AI text, images, or deepfakes. Pure internal team chat does not show that publication label.
 
@@ -49,7 +53,9 @@ TODO: replace this ID3 marking with C2PA content credentials or an audio waterma
 
 Every agent system prompt refuses personalized buy or sell advice about real assets. Gitgram does not move real money, submit blockchain transactions, or collect KYC.
 
-Voice audio is transcribed in memory and the raw recording is discarded. Set `TEAM_RETAIN_VOICE=1` only when you explicitly want files under `data/voice-retained/` (mode `0600`). Before the first push-to-talk, the page tells the user that audio is sent to a cloud speech provider when one is configured.
+Voice audio is processed in real time. `TEAM_RETAIN_VOICE` defaults to off (`0`). Raw audio is discarded after transcription unless both the operator sets `TEAM_RETAIN_VOICE=1` and the user opts in with the separate, unchecked checkbox. The consent text states the purpose and a retention period of at most 30 days. Saying no is a button of the same weight as saying yes. While a recording is actually being kept, the page shows a red dot and the text "Spelar in". Consent is logged with the time, the consent-text version (`2026-10-07`), and the user id. The user can delete recordings immediately. A voice transcript that is only needed to answer is dropped when the session ends. A transcript that was posted as an ordinary chat message stays with the chat. Logs do not contain voice message content.
+
+Speech providers cannot be configured for sentiment, emotion, or speaker identification. Those options throw at startup. Text-to-speech accepts only the provider's standard synthetic voices (`alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`, `verse` for OpenAI, and `alloy` for the fake provider). Custom voice IDs, voice-sample uploads, and clone endpoints are rejected, so a real person's voice, including Milad's, cannot be cloned.
 
 Run the model and voice stubs with the site:
 
@@ -129,7 +135,7 @@ Follow-ups: changing who can see `#trading`, forwarding alerts, or publishing th
 | `LLM_PROVIDER` | No | `fake` for the offline model, or `openai` with `OPENAI_API_KEY`. |
 | `OPENAI_API_KEY` | No | Key for the OpenAI model and, when selected, cloud speech. |
 | `VOICE_PROVIDER` | No | Empty or `none` keeps voice off. `fake` is local. `openai` sends audio to OpenAI. |
-| `TEAM_RETAIN_VOICE` | No | `0` (default) discards raw audio after transcription. `1` stores it under `data/voice-retained/`. |
+| `TEAM_RETAIN_VOICE` | No | `0` (default). Audio is not saved. `1` allows files under `data/voice-retained/` only after the user opts in, for at most 30 days. |
 | `TEAM_MAX_HOPS` | No | Agent mention hops, from 1 to 8. Default 3. |
 | `TEAM_FLAGS_TOKEN` | No | Bearer token for `/api/team/flags`. The route stays off when this is empty. |
 | `GITGRAM_URL` | No | Base URL the agent runner calls. Defaults to `http://127.0.0.1:3000`. |
