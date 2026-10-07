@@ -64,6 +64,10 @@ function visibleMentions(agents, query) {
   });
 }
 
+function micPromptAllowed(state) {
+  return Boolean(state && state.explanationShown && state.confirmed);
+}
+
 function pushToTalkBlocked(options) {
   if (!options.voiceAvailable || !options.micSupported) return true;
   return !options.acknowledged;
@@ -91,6 +95,7 @@ function renderMessageHtml(message, options = {}) {
         ? `<p class="team-disclaimer">${escapeHtml(message.disclaimer)}</p>`
         : '')
     : '';
+  const reminder = message.aiReminder || (panel === 'demo' ? 'AI-agent · Demo · Ingen finansiell rådgivning' : '');
   const speak = options.voiceAvailable && message.authorType === 'agent'
     ? `<button type="button" class="tbtn tbtn-ghost" data-speak="/api/team/messages/${Number(message.id)}/speak" data-agent-name="${escapeHtml(message.authorName)}">Play AI speech</button>`
     : '';
@@ -99,6 +104,7 @@ function renderMessageHtml(message, options = {}) {
     ? `<span class="ai-avatar" aria-label="${escapeHtml(message.authorName)}, AI-agent"><span class="ai-avatar__fallback" aria-hidden="true">${initial}</span><span class="ai-avatar__mark" aria-hidden="true">AI</span><span class="ai-sr-only">AI-agent</span></span><span class="ai-badge" role="status" aria-label="Det här är en AI-agent" title="Det här är en AI-agent">AI-agent</span>`
     : '';
   return `<article class="team-msg is-${panel}" id="message-${Number(message.id)}">
+    ${reminder ? `<p class="ai-trading-reminder">${escapeHtml(reminder)}</p>` : ''}
     <header class="team-msg-head">
       ${agentMark}
       <span class="team-author">${escapeHtml(message.authorName)}</span>
@@ -127,7 +133,9 @@ function renderTradingAlertHtml(alert, options = {}) {
   const csrf = escapeHtml(options.csrfToken || '');
   const symbol = alert.symbol ? `<span class="team-author">${escapeHtml(alert.symbol)}</span>` : '';
   const name = alert.name ? `<span>${escapeHtml(alert.name)}</span>` : '';
+  const reminder = alert.aiReminder || 'AI-agent · Demo · Ingen finansiell rådgivning';
   return `<article class="team-trading-card" id="trading-alert-${Number(alert.id)}" data-external-id="${escapeHtml(alert.externalId || '')}" data-mint="${escapeHtml(alert.mint || '')}" data-stage="${escapeHtml(alert.stage || '')}" data-label="${escapeHtml(alert.label || '')}">
+    <p class="ai-trading-reminder">${escapeHtml(reminder)}</p>
     <p class="team-demo-banner">${escapeHtml(alert.demoLabel || '')}</p>
     <header class="team-msg-head">
       <span class="team-risk-badge ${riskClass(alert.label)}">${escapeHtml(alert.label || '')}</span>
@@ -506,18 +514,67 @@ function initTeam(doc) {
       node.textContent = name;
     });
     const script = rootDoc.getElementById('ai-voice-script');
-    if (script) script.textContent = `Du pratar med en AI-agent. Rösten tillhör ${name}, som handlar för ${orgName}.`;
+    if (script) script.textContent = `Du pratar med en AI-röst. Jag är ${name} och agerar för ${orgName} räkning.`;
     const bannerText = rootDoc.getElementById('ai-voice-banner-text');
     if (bannerText) bannerText.textContent = `Du pratar med ${name} (AI-agent)`;
     const liveText = rootDoc.querySelector('.ai-voice-live__text');
     if (liveText) liveText.textContent = `Samtal med AI-agent · ${name}`;
   }
+  const recordBox = rootDoc.getElementById('voice-record-opt-in');
+  const recordIndicator = rootDoc.getElementById('voice-recording-indicator');
+  const voiceGate = { explanationShown: false, confirmed: false };
+  let callId = '';
+  function showRecording(active) {
+    const on = Boolean(active && recordBox && recordBox.checked);
+    if (recordIndicator) recordIndicator.hidden = !on;
+  }
   function showCall(active) {
     if (voiceBanner) voiceBanner.hidden = !active;
     if (voiceLive) voiceLive.hidden = !active;
+    if (!active) showRecording(false);
+  }
+  async function postConsent(granted) {
+    await fetch('/api/team/voice-consent', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-csrf-token': bootstrap.csrfToken,
+      },
+      body: JSON.stringify({ granted: Boolean(granted) }),
+    });
+  }
+  const recordYes = rootDoc.getElementById('voice-record-yes');
+  const recordNo = rootDoc.getElementById('voice-record-no');
+  const recordDelete = rootDoc.getElementById('voice-record-delete');
+  if (recordYes) {
+    recordYes.addEventListener('click', () => {
+      if (recordBox) recordBox.checked = true;
+      postConsent(true);
+    });
+  }
+  if (recordNo) {
+    recordNo.addEventListener('click', () => {
+      if (recordBox) recordBox.checked = false;
+      showRecording(false);
+      postConsent(false);
+    });
+  }
+  if (recordBox) {
+    recordBox.addEventListener('change', () => postConsent(recordBox.checked));
+  }
+  if (recordDelete) {
+    recordDelete.addEventListener('click', () => {
+      fetch('/api/team/voice-recordings', {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': bootstrap.csrfToken },
+      });
+    });
   }
   function openVoice(name) {
     setVoiceName(name);
+    voiceGate.explanationShown = true;
+    voiceGate.confirmed = false;
+    callId = `c${Date.now().toString(36)}`;
     if (!voiceDialog) return;
     voiceDialog.hidden = false;
     if (voiceStart) voiceStart.focus();
@@ -535,7 +592,8 @@ function initTeam(doc) {
   }
 
   async function playSpeech(url) {
-    const response = await fetch(url);
+    const joiner = url.includes('?') ? '&' : '?';
+    const response = await fetch(callId ? `${url}${joiner}call=${encodeURIComponent(callId)}` : url);
     if (!response.ok) {
       showError('Speech playback is unavailable.');
       showCall(false);
@@ -594,6 +652,9 @@ function initTeam(doc) {
         return;
       }
       if (active) return;
+      voiceGate.confirmed = true;
+      if (!micPromptAllowed(voiceGate)) return;
+      const recording = Boolean(recordBox && recordBox.checked);
       try {
         const stream = await nav.mediaDevices.getUserMedia({ audio: true });
         const recorder = new MediaRecorder(stream);
@@ -605,6 +666,7 @@ function initTeam(doc) {
         recorder.start();
         if (voiceDialog) voiceDialog.hidden = true;
         showCall(true);
+        showRecording(recording);
         talk.dataset.recording = '1';
         talk.setAttribute('aria-pressed', 'true');
         active = { stream, recorder, chunks, stopped };
@@ -633,6 +695,7 @@ function initTeam(doc) {
         headers: {
           'Content-Type': blob.type || 'audio/webm',
           'x-csrf-token': bootstrap.csrfToken,
+          'x-voice-record': recordBox && recordBox.checked ? '1' : '0',
         },
         body: blob,
       });
@@ -696,6 +759,7 @@ if (typeof module !== 'undefined' && module.exports) {
     safeDexScreenerUrl,
     voiceNotes,
     micSupported,
+    micPromptAllowed,
     pushToTalkBlocked,
     mentionQuery,
     visibleMentions,
