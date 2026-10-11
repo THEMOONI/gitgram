@@ -4,14 +4,17 @@ const path = require('path');
 const compression = require('compression');
 const Database = require('better-sqlite3');
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
-const db = new Database(path.join(__dirname, 'db', 'gitgram.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+function openDatabase(dbPath) {
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  return db;
+}
 
-db.exec(`
+function ensureSchema(db) {
+  db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -33,44 +36,59 @@ db.exec(`
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
+}
 
-app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+function createApp(db) {
+  ensureSchema(db);
 
-app.use(session({
-  secret: 'gitgram-secret-' + Date.now(),
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
-}));
+  const app = express();
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+  app.use(compression());
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.static(path.join(__dirname, 'public')));
 
-app.use((req, res, next) => {
-  res.locals.currentUser = req.session.userId ? db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId) : null;
-  res.locals.moment = require('moment');
-  res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + PORT;
-  next();
-});
+  app.use(session({
+    secret: 'gitgram-secret-' + Date.now(),
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
+  }));
 
-const authRoutes = require('./routes/auth')(db);
-const gitRoutes = require('./routes/git')(db);
-const repoRoutes = require('./routes/repos')(db);
-const apiRoutes = require('./routes/api')(db);
+  app.set('view engine', 'ejs');
+  app.set('views', path.join(__dirname, 'views'));
 
-app.use('/', authRoutes);
-app.use('/', gitRoutes);
-app.use('/', repoRoutes);
-app.use('/api', apiRoutes);
+  app.use((req, res, next) => {
+    res.locals.currentUser = req.session.userId ? db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.session.userId) : null;
+    res.locals.moment = require('moment');
+    res.locals.publicUrl = process.env.PUBLIC_URL || 'http://localhost:' + PORT;
+    next();
+  });
 
-app.get('/', (req, res) => {
-  const repos = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.private = 0 ORDER BY r.updated_at DESC LIMIT 20`).all();
-  res.render('index', { title: 'GITGRAM - Your Own Git Platform', repos });
-});
+  const authRoutes = require('./routes/auth')(db);
+  const gitRoutes = require('./routes/git')(db);
+  const repoRoutes = require('./routes/repos')(db);
+  const apiRoutes = require('./routes/api')(db);
 
-app.listen(PORT, () => {
-  console.log('🚀 GITGRAM running on http://localhost:' + PORT);
-});
+  app.use('/', authRoutes);
+  app.use('/', gitRoutes);
+  app.use('/', repoRoutes);
+  app.use('/api', apiRoutes);
+
+  app.get('/', (req, res) => {
+    const repos = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.private = 0 ORDER BY r.updated_at DESC LIMIT 20`).all();
+    res.render('index', { title: 'GITGRAM - Your Own Git Platform', repos });
+  });
+
+  return app;
+}
+
+if (require.main === module) {
+  const db = openDatabase(path.join(__dirname, 'db', 'gitgram.db'));
+  const app = createApp(db);
+  app.listen(PORT, () => {
+    console.log('🚀 GITGRAM running on http://localhost:' + PORT);
+  });
+}
+
+module.exports = { createApp, openDatabase };
