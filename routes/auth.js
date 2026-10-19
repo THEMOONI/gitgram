@@ -70,6 +70,10 @@ module.exports = function(db, options = {}) {
   });
 
   router.post('/logout', (req, res) => {
+    const sessionId = req.sessionID;
+    if (typeof req.app.locals.clearVoiceSession === 'function') {
+      req.app.locals.clearVoiceSession(sessionId);
+    }
     req.session.destroy(() => {
       res.redirect('/');
     });

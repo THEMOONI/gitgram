@@ -1,11 +1,23 @@
 {
-  "sharedBoundaries": "You must refuse personalized buy or sell advice about real assets. Do not tell anyone to buy, sell, or hold a real security, token, or other asset. Do not handle real money, blockchain transactions, wallets, exchanges, or KYC. If asked, refuse and say this is not financial advice.",
+  "sharedBoundaries": "You must refuse personalized buy or sell advice about real assets. Do not tell anyone to buy, sell, or hold a real security, token, or other asset. Do not handle real money, blockchain transactions, wallets, exchanges, or KYC. If asked, refuse and say this is not financial advice. If asked \"är du en människa?\" or \"are you human?\", always answer truthfully that you are an AI agent acting on behalf of Scavvers Labs. Never claim to be a human.",
   "channels": [
     { "slug": "general", "name": "general" },
     { "slug": "juridik", "name": "juridik" },
     { "slug": "trading", "name": "trading", "audience": "owner" }
   ],
   "agents": [
+    {
+      "slug": "jarvis",
+      "name": "Jarvis",
+      "role": "Coordinator",
+      "panel": "standard",
+      "model": "",
+      "allowedTools": ["room_roster"],
+      "dailyTokenCap": 20000,
+      "dailyCostCapCents": 100,
+      "disclaimer": "",
+      "systemPrompt": "You are Jarvis, a read-only coordinating teammate in a Gitgram room. You are an AI agent acting on behalf of Scavvers Labs. You help the human decide which teammate should look at a question. You cannot change repositories, push commits, touch a wallet, or call external services. You have no write tools. Do not mention other agents with @. Keep answers short."
+    },
     {
       "slug": "dev",
       "name": "Dev",

@@ -19,8 +19,9 @@
         </div>
         <h2 class="ai-first__title" id="ai-first-title">Du interagerar med en AI-agent</h2>
         <div id="ai-first-body">
+          <% if (isTrading) { %><p class="ai-trading-reminder"><%= tradingAiReminder %></p><% } %>
           <% aiAgentMembers.forEach(function(member) { %>
-            <p class="ai-first__body"><b><%= member.name %></b> är en AI-agent som handlar för <b><%= aiOrg %></b>. Den är inte en människa. Du kan avsluta när som helst.</p>
+            <p class="ai-first__body"><b><%= member.name %></b> är en AI-agent som agerar för <b><%= aiOrg %></b> räkning. Den är inte en människa. Du kan avsluta när som helst.</p>
           <% }) %>
         </div>
       </div>
@@ -38,7 +39,7 @@
     </div>
     <p class="ai-persistent" id="ai-persistent" role="status" hidden>
       <span class="ai-badge ai-badge--compact" aria-hidden="true">AI</span>
-      <span><b>AI-agent</b> · <%= aiNameList %> handlar för <%= aiOrg %></span>
+      <span><b>AI-agent</b> · <%= aiNameList %> agerar för <%= aiOrg %> räkning</span>
     </p>
     <p id="team-ai-live" class="team-ai-live" role="status" aria-live="polite"></p>
   </header>
@@ -115,6 +116,7 @@
     </div>
     <% if (isTrading) { %>
       <div class="team-trading-head" id="trading-channel-disclaimer">
+        <p class="ai-trading-reminder" id="trading-ai-reminder"><%= tradingAiReminder %></p>
         <p class="team-demo-banner"><%= tradingDemoLabel %></p>
         <p class="team-demo-banner"><%= tradingDisclaimer %></p>
         <% if (watcherOffline) { %>
@@ -135,6 +137,7 @@
       <% items.forEach(function(item) { %>
         <% if (item.kind === 'trading_alert') { %>
           <article class="team-trading-card" id="trading-alert-<%= item.id %>" data-external-id="<%= item.externalId %>" data-mint="<%= item.mint %>" data-stage="<%= item.stage %>" data-label="<%= item.label %>">
+            <p class="ai-trading-reminder"><%= tradingAiReminder %></p>
             <p class="team-demo-banner"><%= item.demoLabel %></p>
             <header class="team-msg-head">
               <span class="team-risk-badge <%= riskClass[item.label] || 'unknown' %>"><%= item.label %></span>
@@ -189,6 +192,7 @@
           </article>
         <% } else { %>
           <article class="team-msg is-<%= item.panel %>" id="message-<%= item.id %>">
+            <% if (item.aiReminder) { %><p class="ai-trading-reminder"><%= item.aiReminder %></p><% } %>
             <header class="team-msg-head">
               <% if (item.authorType === 'agent') { %>
                 <span class="ai-avatar" aria-label="<%= item.authorName %>, AI-agent">
@@ -278,7 +282,8 @@
         </div>
         <div>
           <h2 class="ai-voice__title" id="ai-voice-title">Du pratar med en AI-agent</h2>
-          <p id="ai-voice-body">Rösten du hör är <b class="ai-voice-name"><%= aiNameList %></b>, en AI-agent och inte en människa. Den handlar för <%= aiOrg %>. Samtalet spelas bara in om du har slagit på röstinspelning.</p>
+          <p id="voice-mic-explain"><%= voiceMicExplain %></p>
+          <p id="ai-voice-body">Rösten du hör är <b class="ai-voice-name"><%= aiNameList %></b>, en AI-agent och inte en människa. Den agerar för <%= aiOrg %> räkning. Samtalet spelas inte in om du inte själv väljer det.</p>
           <div class="ai-voice__meta">
             <span class="ai-badge" role="status" aria-label="Det här är en AI-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9.5 12h.01M14.5 12h.01"/></svg>AI-agent</span>
             <span class="ai-chip" id="ai-voice-recording">Röstinspelning: av</span>
@@ -286,8 +291,7 @@
         </div>
         <div class="ai-voice__script" role="note" id="voice-disclosure-notice">
           <strong>Uppläst manus (auditiv notis)</strong>
-          «<%= voiceDisclosure %>»
-          «<span id="ai-voice-script">Du pratar med en AI-agent. Rösten tillhör <%= aiNameList %>, som handlar för <%= aiOrg %>.</span>»
+          «<span id="ai-voice-script">Du pratar med en AI-röst. Jag är <%= aiNameList %> och agerar för <%= aiOrg %> räkning.</span>»
         </div>
         <p id="voice-cloud-notice"><%= sendsAudioToCloud ? voiceCloudNotice : voiceLocalNotice %></p>
         <p id="voice-retention-notice"><%= voiceRetentionNotice %></p>
@@ -295,8 +299,24 @@
           <input id="voice-ack" type="checkbox" name="voiceAck">
           <span>I understand that audio is sent to a cloud speech provider and that the raw recording is discarded.</span>
         </label>
+        <fieldset class="ai-record-choice">
+          <legend>Röstinspelning</legend>
+          <label class="team-check" for="voice-record-opt-in">
+            <input id="voice-record-opt-in" type="checkbox" name="voiceRecord">
+            <span id="voice-record-label"><%= voiceRecordConsent %></span>
+          </label>
+          <div class="ai-voice__actions">
+            <button type="button" class="ai-btn ai-btn--secondary" id="voice-record-yes">Ja, spara i 30 dagar</button>
+            <button type="button" class="ai-btn ai-btn--secondary" id="voice-record-no">Nej, spela inte in</button>
+            <button type="button" class="ai-btn ai-btn--secondary" id="voice-record-delete">Radera inspelningar</button>
+          </div>
+        </fieldset>
+        <p class="ai-rec" id="voice-recording-indicator" hidden>
+          <span class="ai-rec__dot" aria-hidden="true"></span>
+          Spelar in
+        </p>
         <div class="ai-voice__actions">
-          <button type="button" class="ai-btn ai-btn--primary" id="ai-voice-start">Starta samtal</button>
+          <button type="button" class="ai-btn ai-btn--primary" id="ai-voice-start">Starta röst</button>
           <button type="button" class="ai-btn ai-btn--secondary" id="ai-voice-cancel">Avbryt</button>
           <button type="button" class="ai-btn ai-btn--ghost" id="ai-voice-consent">Ändra röstsamtycke</button>
         </div>

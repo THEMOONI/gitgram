@@ -455,14 +455,20 @@ test('room auth, membership, escaping, caps, hops, voice, and flags', async (t) 
   assert.match(tradingPage.text, /class="ai-avatar"/);
   assert.match(tradingPage.text, /role="alertdialog"/);
   assert.match(tradingPage.text, /Du interagerar med en AI-agent/);
-  assert.match(tradingPage.text, /Dev<\/b> är en AI-agent som handlar för <b>Scavvers Labs<\/b>/);
+  assert.match(tradingPage.text, /Dev<\/b> är en AI-agent som agerar för <b>Scavvers Labs<\/b> räkning/);
   assert.match(tradingPage.text, /Jag förstår/);
   assert.match(tradingPage.text, /id="ai-persistent"/);
-  assert.match(tradingPage.text, /AI-agent<\/b> · Designer, Dev, Juridik, Researcher och Trading handlar för Scavvers Labs/);
+  assert.match(tradingPage.text, /AI-agent<\/b> · Designer, Dev, Jarvis, Juridik, Researcher och Trading agerar för Scavvers Labs räkning/);
   assert.match(tradingPage.text, /id="ai-voice"/);
   assert.match(tradingPage.text, /Du pratar med en AI-agent/);
   assert.match(tradingPage.text, /Röstinspelning: av/);
-  assert.match(tradingPage.text, /Starta samtal/);
+  assert.match(tradingPage.text, /Starta röst/);
+  assert.match(tradingPage.text, /id="voice-mic-explain"/);
+  assert.match(tradingPage.text, /id="voice-record-opt-in"/);
+  assert.doesNotMatch(tradingPage.text, /id="voice-record-opt-in"[^>]*checked/);
+  assert.match(tradingPage.text, /Nej, spela inte in/);
+  assert.match(tradingPage.text, /Ja, spara i 30 dagar/);
+  assert.match(tradingPage.text, /Spelar in/);
   assert.match(tradingPage.text, /class="ai-voice-live"/);
   assert.match(tradingPage.text, /class="ai-voice-banner"/);
   assert.doesNotMatch(tradingPage.text, /class="ai-content"/);
@@ -731,24 +737,51 @@ test('langgraph interrupt blocks write tools and read-only tools stay local', as
   assert.equal(quiet.reason, 'daily_cap');
 });
 
-test('voice retention stores audio only when the owner enables it', async () => {
+test('voice retention stores audio only when the owner enables it and the user opts in', async () => {
   const ctx = await start({ retainVoiceAudio: true });
   try {
     const alice = request.agent(ctx.app);
     await register(alice, 'ada');
     const token = csrfFrom((await alice.get('/team/general')).text);
     const payload = Buffer.from('retain-me-audio');
+    const withoutConsent = await alice.post('/api/team/rooms/general/stt')
+      .set('x-csrf-token', token)
+      .set('Content-Type', 'audio/webm')
+      .set('x-voice-record', '1')
+      .send(payload);
+    assert.equal(withoutConsent.status, 201);
+    assert.equal(withoutConsent.body.recorded, false);
+    assert.equal(fs.existsSync(path.join(ctx.dir, 'data', 'voice-retained')), false);
+    const consent = await alice.post('/api/team/voice-consent')
+      .set('x-csrf-token', token)
+      .send({ granted: true });
+    assert.equal(consent.status, 201);
+    assert.equal(consent.body.consent.granted, true);
+    assert.equal(consent.body.consent.textVersion, '2026-10-07');
+    assert.equal(consent.body.consent.userId, 1);
+    assert.ok(consent.body.consent.createdAt);
     const stt = await alice.post('/api/team/rooms/general/stt')
       .set('x-csrf-token', token)
       .set('Content-Type', 'audio/webm')
+      .set('x-voice-record', '1')
       .send(payload);
     assert.equal(stt.status, 201);
+    assert.equal(stt.body.recorded, true);
+    const stored = ctx.db.prepare('SELECT created_at, expires_at, user_id FROM voice_recordings WHERE id = ?').get(stt.body.recordingId);
+    const span = new Date(stored.expires_at).getTime() - new Date(stored.created_at).getTime();
+    assert.equal(stored.user_id, consent.body.consent.userId);
+    assert.ok(span <= 30 * 24 * 60 * 60 * 1000);
+    assert.ok(span > 29 * 24 * 60 * 60 * 1000);
     const dir = path.join(ctx.dir, 'data', 'voice-retained');
     const files = fs.readdirSync(dir);
     assert.equal(files.length, 1);
     assert.equal(fs.readFileSync(path.join(dir, files[0])).equals(payload), true);
     const mode = fs.statSync(path.join(dir, files[0])).mode & 0o777;
     assert.equal(mode, 0o600);
+    const removed = await alice.delete(`/api/team/voice-recordings/${stt.body.recordingId}`)
+      .set('x-csrf-token', token);
+    assert.equal(removed.status, 200);
+    assert.equal(fs.existsSync(path.join(dir, files[0])), false);
   } finally {
     await ctx.close();
   }

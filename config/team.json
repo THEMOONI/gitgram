@@ -14,6 +14,8 @@
   "aiAgentBadge": "AI-agent",
   "aiGeneratedLabel": "AI-generated",
   "voiceDisclosure": "Du pratar med en AI-röst",
+  "voiceMicExplain": "Röstsamtal: ditt tal skickas i realtid till vår AI-leverantör (OpenAI, USA) för att omvandlas till text och svar. Vi spelar inte in samtalet.",
+  "tradingAiReminder": "AI-agent · Demo · Ingen finansiell rådgivning",
   "voiceCloudNotice": "Push-to-talk sends audio to a cloud speech provider for transcription.",
   "voiceLocalNotice": "This server transcribes audio locally. When a cloud speech provider is configured, push-to-talk sends audio to that provider.",
   "voiceRetentionNotice": "Voice recording is off by default. Audio is transcribed in memory and the raw recording is discarded.",

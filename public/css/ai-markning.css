@@ -707,3 +707,39 @@
     width: 100%;
   }
 }
+
+.ai-mark .ai-trading-reminder,
+[data-ai-mark] .ai-trading-reminder {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--ai-line, #c9b27c);
+  background: var(--ai-bg-soft, #fff8e8);
+  color: var(--ai-text-1, #1c1408);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ai-mark .ai-rec,
+[data-ai-mark] .ai-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  color: #9f1239;
+  font-weight: 700;
+}
+
+.ai-mark .ai-rec__dot,
+[data-ai-mark] .ai-rec__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e11d48;
+}
+
+.ai-mark .ai-record-choice,
+[data-ai-mark] .ai-record-choice {
+  margin: 12px 0;
+  padding: 0;
+  border: 0;
+}

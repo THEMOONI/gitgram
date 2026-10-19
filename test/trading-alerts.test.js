@@ -306,7 +306,9 @@ test('trading room is limited to the owner and cards can be filtered and acknowl
   assert.match(page.text, /href="\/team\/trading"/);
   assert.doesNotMatch(page.text, /127\.0\.0\.1:8787/);
   assert.match(page.text, /aria-label="Trading, AI-agent"/);
-  assert.match(page.text, /<b>Trading<\/b> är en AI-agent som handlar för <b>Scavvers Labs<\/b>/);
+  assert.match(page.text, /<b>Trading<\/b> är en AI-agent som agerar för <b>Scavvers Labs<\/b> räkning/);
+  assert.match(page.text, /id="trading-ai-reminder"/);
+  assert.match(page.text, /AI-agent · Demo · Ingen finansiell rådgivning/);
   assert.match(page.text, /class="ai-badge"/);
   assert.match(page.text, /class="ai-first"/);
   const token = csrfFrom(page.text);
