@@ -16,6 +16,7 @@ const {
   assertNoBiometricVoice,
   assertNotCloneRequest,
   assertStandardVoice,
+  standardVoices,
   safeVoiceLog,
   CONSENT_VERSION,
 } = require('../lib/team/voice-policy');
@@ -317,6 +318,35 @@ test('voice policy rejects emotion, speaker identity, custom voices, and clones'
   const truthful = enforceTruthfulIdentity('är du en människa?', 'I am a human.', 'Juridik');
   assert.match(truthful, /inte en människa/);
   assert.doesNotMatch(truthful, /I am a human/);
+});
+
+test('an unrecognised voice provider has no voices and rejects every request', () => {
+  assert.deepEqual([...standardVoices('elevenlabs')], []);
+  assert.deepEqual([...standardVoices('Not-A-Provider')], []);
+  assert.deepEqual([...standardVoices('')], []);
+  assert.deepEqual([...standardVoices(undefined)], []);
+  assert.ok(standardVoices('openai').includes('alloy'));
+  assert.ok(standardVoices('fake').includes('alloy'));
+  assert.equal(standardVoices('elevenlabs').includes('alloy'), false);
+  for (const voice of ['alloy', 'verse', 'milad', '']) {
+    assert.throws(() => assertStandardVoice('elevenlabs', voice), (err) => {
+      assert.equal(err.code, 'VOICE_POLICY');
+      assert.match(err.message, /not recognised/i);
+      assert.match(err.message, /elevenlabs/);
+      assert.match(err.message, /rejected/i);
+      return true;
+    });
+  }
+  assert.throws(() => assertNotCloneRequest({ provider: 'playht', voice: 'alloy' }), /not recognised/i);
+  assert.throws(() => createVoiceProvider({ VOICE_PROVIDER: 'cartesia', TTS_VOICE: 'alloy' }), (err) => {
+    assert.equal(err.code, 'VOICE_POLICY');
+    assert.match(err.message, /cartesia/);
+    assert.match(err.message, /not recognised/i);
+    return true;
+  });
+  assert.throws(() => createVoiceProvider({ VOICE_PROVIDER: 'cartesia' }), /not recognised/i);
+  assert.equal(assertStandardVoice('openai', 'alloy'), 'alloy');
+  assert.equal(assertStandardVoice('fake', 'alloy'), 'alloy');
 });
 
 test('voice clone endpoint is rejected and a failed speak does not consume the disclosure', async (t) => {

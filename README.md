@@ -55,7 +55,7 @@ Every agent system prompt refuses personalized buy or sell advice about real ass
 
 Voice audio is processed in real time. `TEAM_RETAIN_VOICE` defaults to off (`0`). Raw audio is discarded after transcription unless both the operator sets `TEAM_RETAIN_VOICE=1` and the user opts in with the separate, unchecked checkbox. The consent text states the purpose and a retention period of at most 30 days. Saying no is a button of the same weight as saying yes. While a recording is actually being kept, the page shows a red dot and the text "Spelar in". Consent is logged with the time, the consent-text version (`2026-10-07`), and the user id. The user can delete recordings immediately. A voice transcript that is only needed to answer is dropped when the session ends. A transcript that was posted as an ordinary chat message stays with the chat. Logs do not contain voice message content.
 
-Speech providers cannot be configured for sentiment, emotion, or speaker identification. Those options throw at startup. Text-to-speech accepts only the provider's standard synthetic voices (`alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`, `verse` for OpenAI, and `alloy` for the fake provider). Custom voice IDs, voice-sample uploads, and clone endpoints are rejected, so a real person's voice, including Milad's, cannot be cloned.
+Speech providers cannot be configured for sentiment, emotion, or speaker identification. Those options throw at startup. Text-to-speech accepts only the provider's standard synthetic voices (`alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer`, `verse` for OpenAI, and `alloy` for the fake provider). An unrecognised provider has an empty voice list, and any voice request for it is rejected. Custom voice IDs, voice-sample uploads, and clone endpoints are rejected, so a real person's voice, including Milad's, cannot be cloned.
 
 Run the model and voice stubs with the site:
 
@@ -134,7 +134,7 @@ Follow-ups: changing who can see `#trading`, forwarding alerts, or publishing th
 | `GITGRAM_DATA` | No | Directory for bare repositories. Defaults to `data/`. |
 | `LLM_PROVIDER` | No | `fake` for the offline model, or `openai` with `OPENAI_API_KEY`. |
 | `OPENAI_API_KEY` | No | Key for the OpenAI model and, when selected, cloud speech. |
-| `VOICE_PROVIDER` | No | Empty or `none` keeps voice off. `fake` is local. `openai` sends audio to OpenAI. |
+| `VOICE_PROVIDER` | No | Empty or `none` keeps voice off. `fake` is local. `openai` sends audio to OpenAI. Any other name is rejected. |
 | `TEAM_RETAIN_VOICE` | No | `0` (default). Audio is not saved. `1` allows files under `data/voice-retained/` only after the user opts in, for at most 30 days. |
 | `TEAM_MAX_HOPS` | No | Agent mention hops, from 1 to 8. Default 3. |
 | `TEAM_FLAGS_TOKEN` | No | Bearer token for `/api/team/flags`. The route stays off when this is empty. |
