@@ -1,7 +1,8 @@
 const express = require('express');
-const router = express.Router();
 
 module.exports = function(db) {
+  const router = express.Router();
+
   router.get('/search/repos', (req, res) => {
     const { q } = req.query;
     if (!q) return res.json([]);

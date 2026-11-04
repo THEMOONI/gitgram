@@ -1,8 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const router = express.Router();
 
 module.exports = function(db) {
+  const router = express.Router();
+
   router.get('/register', (req, res) => {
     if (req.session.userId) return res.redirect('/');
     res.render('register', { title: 'Sign Up - GITGRAM', error: null });
