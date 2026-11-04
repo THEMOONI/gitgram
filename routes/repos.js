@@ -1,10 +1,11 @@
 const express = require('express');
-const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 
 module.exports = function(db) {
+  const router = express.Router();
+
   function getRepo(req, res, next) {
     const { owner, repo } = req.params;
     const repoData = db.prepare(`SELECT r.*, u.username as owner_name FROM repositories r JOIN users u ON r.owner_id = u.id WHERE r.full_name = ?`).get(owner + '/' + repo);
